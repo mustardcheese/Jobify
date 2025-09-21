@@ -1,0 +1,117 @@
+/* Job Site CSS */
+
+/* Ensure eggshell text color is applied with highest specificity */
+html .eggshell-text, html .eggshell-text *, html .eggshell-text h1, html .eggshell-text h2, html .eggshell-text h3, html .eggshell-text h4, html .eggshell-text h5, html .eggshell-text h6, html .eggshell-text p, html .eggshell-text span, html .eggshell-text a, html .eggshell-text div {
+  color: #F0F0F0 !important;
+}
+.bg-index{
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.navbar a.nav-link {
+  color: #F0F0F0 !important;
+}
+
+.bg-dark {
+  background-color: #0f2a44 !important;
+}
+
+.ms-footer {
+  background-color: #0f2a44;
+}
+
+.ms-footer p {
+  color: #F0F0F0;
+  font-size: 13px;
+}
+
+.ms-footer a:hover {
+  color: #0f2a44;
+  text-decoration: none;
+}
+
+.ms-footer-bottom span{
+  font-size: 13px;
+  line-height: 38px;
+}
+
+.ms-footer-bottom a {
+  color: #0f2a44;
+  text-decoration: none;
+}
+
+.ms-footer-bottom a:hover {
+  color: #F0F0F0;
+}
+
+.img-card-300 {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: center;
+}
+
+.img-card-500 {
+  width: auto;
+  max-width: 500px;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+.img-card-home {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: center;
+}
+
+.navy-bg {
+  background-color: #0f2a44 !important;
+}
+
+.navy-secondary-bg {
+  background-color: #0f2a44 !important;
+}
+
+.navy-header {
+  background-color: #0f2a44 !important;
+}
+
+.navy-secondary-text {
+  color: #0f2a44 !important;
+}
+
+.navy-text {
+  color: #0f2a44 !important;
+}
+
+/* Universal text color rules - Nuclear option */
+.eggshell-text, .eggshell-text *, .eggshell-text a, .eggshell-text span, .eggshell-text h1, .eggshell-text h2, .eggshell-text h3, .eggshell-text h4, .eggshell-text h5, .eggshell-text h6, .eggshell-text p, .eggshell-text div, .eggshell-text b, .eggshell-text strong, .eggshell-text i, .eggshell-text em {
+  color: #F0F0F0 !important;
+}
+
+/* Buttons with eggshell text */
+.btn.eggshell-text, .btn.eggshell-text:hover, .btn.eggshell-text:focus, .btn.eggshell-text:active {
+  color: #F0F0F0 !important;
+}
+
+.eggshell-bg {
+  background-color: #F0F0F0 !important;
+}
+
+.max-width-100 {
+  max-width: 100%;
+  height: auto;
+}
+
+.job-card {
+  transition: transform 0.2s;
+}
+
+.job-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}

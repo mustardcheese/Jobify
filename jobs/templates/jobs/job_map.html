@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Map container -->
+<div id="map" style="height: 600px; width: 100%;"></div>
+
+<!-- Hidden divs to store job data -->
+<div id="job-markers" style="display: none;">
+  {% for job in jobs %}
+    {% if job.latitude and job.longitude %}
+      <div class="job-marker"
+           data-lat="{{ job.latitude }}"
+           data-lng="{{ job.longitude }}"
+           data-title="{{ job.title|escapejs }}"
+           data-company="{{ job.company|escapejs }}"
+           data-location="{{ job.location|escapejs }}">
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  // Initialize the map
+  var map = L.map('map').setView([33.7490, -84.3880], 10);
+
+  // Add OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // Add markers by reading from HTML elements
+  document.querySelectorAll('.job-marker').forEach(function(el) {
+      var lat = el.dataset.lat;
+      var lng = el.dataset.lng;
+      var title = el.dataset.title;
+      var company = el.dataset.company;
+      var location = el.dataset.location;
+
+      L.marker([lat, lng]).addTo(map)
+        .bindPopup("<b>" + title + "</b><br>" + company + "<br>" + location);
+  });
+</script>
+
+{% endblock content %}

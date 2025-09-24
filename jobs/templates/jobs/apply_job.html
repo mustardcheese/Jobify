@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Back to Job Link -->
+            <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Job
+            </a>
+
+            <!-- Application Form Card -->
+            <div class="card">
+                <div class="card-header {% if apply_type == 'quick' %}bg-success text-white{% else %}navy-bg eggshell-text{% endif %}">
+                    <h4 class="mb-0">
+                        <i class="fas fa-{% if apply_type == 'quick' %}bolt{% else %}edit{% endif %} me-2"></i>
+                        {% if apply_type == 'quick' %}Complete Quick Apply
+                        {% else %}Apply to {{ job.title }}{% endif %}
+                    </h4>
+                    <p class="mb-0 mt-1">{{ job.company }} • {{ job.location }}</p>
+                </div>
+                <div class="card-body">
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if apply_type == 'quick' %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-bolt me-2"></i>
+                        <strong>Quick Apply:</strong> Resume required, message optional for faster application.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-edit me-2"></i>
+                        <strong>Traditional Apply:</strong> Both resume and personalized message are required.
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Resume Upload (Required for both) -->
+                        <div class="mb-4">
+                            <label for="{{ form.resume.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-file-upload me-1"></i>{{ form.resume.label }}
+                            </label>
+                            {{ form.resume }}
+                            {% if form.resume.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.resume.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>Required for all applications. PDF, DOC, or DOCX format (max 5MB)
+                            </div>
+                        </div>
+
+                        <!-- Message Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.application_note.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-comment me-1"></i>{{ form.application_note.label }}
+                            </label>
+                            {{ form.application_note }}
+                            {% if form.application_note.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.application_note.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                {% if apply_type == 'quick' %}
+                                Optional: Add a quick note to stand out. Not required for Quick Apply.
+                                {% else %}
+                                Required: Tell the employer why you're interested and what makes you a good fit.
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Requirements Summary -->
+                        <div class="alert {% if apply_type == 'quick' %}alert-info{% else %}alert-warning{% endif %}">
+                            <h6 class="fw-bold"><i class="fas fa-list-check me-2"></i>Application Requirements</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><i class="fas fa-check me-2 text-success"></i><strong>Resume:</strong> Required</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1">
+                                        <i class="fas fa-{% if apply_type == 'quick' %}info{% else %}check{% endif %} me-2 {% if apply_type == 'quick' %}text-info{% else %}text-success{% endif %}"></i>
+                                        <strong>Message:</strong> {% if apply_type == 'quick' %}Optional{% else %}Required{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn {% if apply_type == 'quick' %}btn-success{% else %}navy-bg{% endif %} eggshell-text">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                {% if apply_type == 'quick' %}Complete Quick Apply{% else %}Submit Application{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-label {
+    font-size: 1.1em;
+}
+.form-control:focus {
+    border-color: #0f2a44;
+    box-shadow: 0 0 0 0.2rem rgba(15, 42, 68, 0.25);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="navy-text mb-4">My Job Applications</h1>
+    
+    {% if applications %}
+        <div class="row">
+            {% for application in applications %}
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">{{ application.job.title }}</h5>
+                            <span class="badge 
+                                {% if application.status == 'pending' %}bg-warning
+                                {% elif application.status == 'accepted' %}bg-success
+                                {% elif application.status == 'rejected' %}bg-danger
+                                {% else %}bg-info{% endif %}">
+                                {{ application.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            {{ application.job.company }} • {{ application.job.location }}
+                        </h6>
+                        
+                        <p class="card-text">
+                            <strong>Your message:</strong><br>
+                            {{ application.application_note|truncatewords:30 }}
+                        </p>
+                        
+                        <div class="mt-auto">
+                            <small class="text-muted">
+                                Applied: {{ application.applied_at|date:"M d, Y" }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'job_detail' application.job.id %}" class="btn btn-outline-primary btn-sm">
+                            View Job
+                        </a>
+                        {% if application.resume %}
+                        <a href="{{ application.resume.url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                            <i class="fas fa-file-download me-1"></i>Resume
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            <h4>No applications yet</h4>
+            <p class="mb-3">Start applying to jobs to see them here!</p>
+            <a href="{% url 'job_list' %}" class="btn navy-bg eggshell-text">Browse Jobs</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

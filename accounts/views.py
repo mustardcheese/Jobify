@@ -1,10 +1,12 @@
 from django.shortcuts import render
-from .forms import CustomUserCreationForm, CustomErrorList
+from .forms import CustomUserCreationForm, CustomErrorList, SimpleProfileForm
 from django.contrib.auth import login as auth_login, authenticate
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.models import User
+from django.contrib import messages
+from .models import UserProfile
 
 def login(request):
     template_data = {}
@@ -36,7 +38,9 @@ def signup(request):
         form = CustomUserCreationForm(request.POST,error_class=CustomErrorList)
         
         if form.is_valid():
-            form.save()
+            user = form.save()
+            # Create a profile for the new user
+            UserProfile.objects.create(user=user)
             return redirect('accounts.login')
         
         else:
@@ -48,3 +52,33 @@ def signup(request):
 def logout(request):
     auth_logout(request)
     return redirect('home.index')
+
+@login_required
+def profile(request):
+    """Simple profile page with text boxes and privacy controls"""
+    template_data = {}
+    template_data['title'] = 'Profile'
+    
+    # Get or create user profile
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    template_data['profile'] = profile
+    template_data['form'] = SimpleProfileForm(instance=profile)
+    
+    return render(request, 'accounts/profile.html', {'template_data': template_data})
+
+@login_required
+def save_profile(request):
+    """Save profile information"""
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        form = SimpleProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile saved successfully!')
+            return redirect('accounts.profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    
+    return redirect('accounts.profile')

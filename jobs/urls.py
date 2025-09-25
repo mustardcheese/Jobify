@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:job_id>/quick-apply/', views.quick_apply, name='quick_apply'),
     path('<int:job_id>/quick-apply/form/', views.quick_apply_form, name='quick_apply_form'),
     path('my-applications/', views.my_applications, name='my_applications'),
+    path('recommendations/', views.job_recommendations, name='job_recommendations'),
 ]

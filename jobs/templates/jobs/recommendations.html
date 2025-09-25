@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-3">Recommended Jobs for You</h2>
+
+  {% if recommended_jobs %}
+    <p>Based on your skills: {{ user_skills|join:", " }}</p>
+    <ul class="list-group">
+      {% for job in recommended_jobs %}
+        <li class="list-group-item">
+          <h5>
+            <a href="{% url 'job_detail' job.id %}">{{ job.title }}</a>
+          </h5>
+          <p><strong>{{ job.company }}</strong> — {{ job.location }}</p>
+          <p>{{ job.description|truncatewords:25 }}</p>
+          <span class="badge bg-primary">
+            {{ job.match_count }} matching skill{{ job.match_count|pluralize }}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No job recommendations found. Try adding more skills to your profile!</p>
+  {% endif %}
+</div>
+<!-- Spacer -->
+<div class="mb-5"></div>
+{% endblock %}

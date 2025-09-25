@@ -7,78 +7,97 @@ from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.models import User
 from django.contrib import messages
 from .models import UserProfile
+from jobs.models import Application
+
 
 def login(request):
     template_data = {}
-    template_data['title'] = 'Login'
-    if request.method == 'GET':
-        return render(request, 'accounts/login.html', {'template_data': template_data})
+    template_data["title"] = "Login"
+    if request.method == "GET":
+        return render(request, "accounts/login.html", {"template_data": template_data})
 
-    elif request.method == 'POST':
-        user = authenticate(request,username = request.POST['username'],password = request.POST['password'])
+    elif request.method == "POST":
+        user = authenticate(
+            request,
+            username=request.POST["username"],
+            password=request.POST["password"],
+        )
 
         if user is None:
-            template_data['error'] ='The username or password is incorrect.'
-            return render(request, 'accounts/login.html',{'template_data': template_data})
+            template_data["error"] = "The username or password is incorrect."
+            return render(
+                request, "accounts/login.html", {"template_data": template_data}
+            )
 
         else:
             auth_login(request, user)
-            return redirect('home.index')
+            return redirect("home.index")
+
 
 def signup(request):
     template_data = {}
-    template_data['title'] = 'Sign Up'
+    template_data["title"] = "Sign Up"
 
-    if request.method == 'GET':
-        template_data['form'] = CustomUserCreationForm()
-        return render(request, 'accounts/signup.html',
-                     {'template_data': template_data})
-        
-    elif request.method == 'POST':
-        form = CustomUserCreationForm(request.POST,error_class=CustomErrorList)
-        
+    if request.method == "GET":
+        template_data["form"] = CustomUserCreationForm()
+        return render(request, "accounts/signup.html", {"template_data": template_data})
+
+    elif request.method == "POST":
+        form = CustomUserCreationForm(request.POST, error_class=CustomErrorList)
+
         if form.is_valid():
             user = form.save()
             # Create a profile for the new user
             UserProfile.objects.create(user=user)
-            return redirect('accounts.login')
-        
+            return redirect("accounts.login")
+
         else:
-            template_data['form'] = form
-            return render(request, 'accounts/signup.html',
-                {'template_data': template_data})
+            template_data["form"] = form
+            return render(
+                request, "accounts/signup.html", {"template_data": template_data}
+            )
+
 
 @login_required
 def logout(request):
     auth_logout(request)
-    return redirect('home.index')
+    return redirect("home.index")
+
 
 @login_required
 def profile(request):
     """Simple profile page with text boxes and privacy controls"""
     template_data = {}
-    template_data['title'] = 'Profile'
-    
+    template_data["title"] = "Profile"
+
     # Get or create user profile
     profile, created = UserProfile.objects.get_or_create(user=request.user)
-    
-    template_data['profile'] = profile
-    template_data['form'] = SimpleProfileForm(instance=profile)
-    
-    return render(request, 'accounts/profile.html', {'template_data': template_data})
+
+    template_data["profile"] = profile
+    template_data["form"] = SimpleProfileForm(instance=profile)
+
+    return render(request, "accounts/profile.html", {"template_data": template_data})
+
 
 @login_required
 def save_profile(request):
     """Save profile information"""
     profile, created = UserProfile.objects.get_or_create(user=request.user)
-    
-    if request.method == 'POST':
+
+    if request.method == "POST":
         form = SimpleProfileForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Profile saved successfully!')
-            return redirect('accounts.profile')
+            messages.success(request, "Profile saved successfully!")
+            return redirect("accounts.profile")
         else:
-            messages.error(request, 'Please correct the errors below.')
-    
-    return redirect('accounts.profile')
+            messages.error(request, "Please correct the errors below.")
+
+    return redirect("accounts.profile")
+
+
+@login_required
+def user_applications(request):
+    applications = Application.objects.filter(applicant=request.user)
+    context = {"applications": applications}
+    return render(request, "accounts/applications.html", context)

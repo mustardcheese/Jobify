@@ -190,3 +190,72 @@ def job_map(request):
 
     context = {"template_data": {"title": "Job Map"}, "jobs": jobs}
     return render(request, "jobs/job_map.html", context)
+
+@login_required
+def my_applications(request):
+    """View for users to see their applications"""
+    applications = Application.objects.filter(applicant=request.user).order_by(
+        "-applied_at"
+    )
+
+    context = {
+        "applications": applications,
+    }
+    return render(request, "jobs/applications.html", context)
+
+
+def job_map(request):
+    jobs = Job.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+
+    context = {"template_data": {"title": "Job Map"}, "jobs": jobs}
+    return render(request, "jobs/job_map.html", context)
+
+
+@login_required
+def job_recommendations(request):
+    profile = request.user.profile
+
+    # Safely handle None or empty skills
+    raw_skills = profile.skills or ""  # fallback to empty string
+    user_skills = [s.strip().lower() for s in raw_skills.split(",") if s.strip()]
+
+    if not user_skills:
+        messages.info(request, "You haven’t added any skills yet. Update your profile to get recommendations.")
+        return render(request, "jobs/recommendations.html", {
+            "recommended_jobs": [],
+            "user_skills": [],
+        })
+
+    # Build query across multiple fields
+    query = Q()
+    for skill in user_skills:
+        query |= (
+            Q(title__icontains=skill) |
+            Q(description__icontains=skill) |
+            Q(requirements__icontains=skill)
+        )
+
+    jobs = Job.objects.filter(is_active=True).filter(query).distinct()
+
+    # Rank jobs by number of matched skills
+    ranked_jobs = []
+    for job in jobs:
+        job_text = f"{job.title} {job.description} {job.requirements}".lower()
+        match_count = sum(1 for skill in user_skills if skill in job_text)
+        if match_count > 0:
+            ranked_jobs.append((job, match_count))
+
+    ranked_jobs.sort(key=lambda x: x[1], reverse=True)
+
+    recommended_jobs = []
+    for job, count in ranked_jobs:
+        job.match_count = count
+        recommended_jobs.append(job)
+
+    if not recommended_jobs:
+        messages.warning(request, "No job recommendations found. Try adding more skills to your profile.")
+
+    return render(request, "jobs/recommendations.html", {
+        "recommended_jobs": recommended_jobs,
+        "user_skills": user_skills,
+    })

@@ -23,10 +23,9 @@ print(f"BASE_DIR is: {BASE_DIR}")  # Add this temporarily to see the path
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-p-ewfym=&t3@3sns)74!@7v3%m!(4khjj3ux$(f8^zts)ko8jt'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False  # Set to False for production
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*']  
 
 
 # Application definition
@@ -120,7 +119,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Changed to avoid conflict with STATICFILES_DIRS
 
 STATICFILES_DIRS = [
     BASE_DIR / 'jobsite' / 'static',
@@ -130,3 +129,13 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Production settings for PythonAnywhere
+if not DEBUG:
+    # Security settings for production
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # Static files settings for production
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'

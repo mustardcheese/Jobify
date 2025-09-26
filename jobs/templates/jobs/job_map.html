@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
+<div class="container mt-4">
+    <!-- Search and Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="navy-text mb-3">Find Jobs Near You</h2>
+            
+        </div>
+    </div>
 
 <!-- Map container -->
 <div id="map" style="height: 600px; width: 100%;"></div>
@@ -14,7 +22,8 @@
            data-lng="{{ job.longitude }}"
            data-title="{{ job.title|escapejs }}"
            data-company="{{ job.company|escapejs }}"
-           data-location="{{ job.location|escapejs }}">
+           data-location="{{ job.location|escapejs }}"
+           data-id="{{ job.id }}">
       </div>
     {% endif %}
   {% endfor %}
@@ -41,9 +50,19 @@
       var title = el.dataset.title;
       var company = el.dataset.company;
       var location = el.dataset.location;
+      var id = el.dataset.id;
+      var jobUrl = "{% url 'job_detail' '0' %}".replace('0', id);
 
+      var popupHtml = `
+        <b>${title}</b><br>
+        ${company}<br>
+        ${location}<br><br>
+        <a href="${jobUrl}" class="btn navy-bg eggshell-text btn-sm">
+            View Details & Apply
+        </a>
+    `;
       L.marker([lat, lng]).addTo(map)
-        .bindPopup("<b>" + title + "</b><br>" + company + "<br>" + location);
+        .bindPopup(popupHtml);
   });
 </script>
 

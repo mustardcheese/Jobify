@@ -23,7 +23,7 @@ print(f"BASE_DIR is: {BASE_DIR}")  # Add this temporarily to see the path
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-p-ewfym=&t3@3sns)74!@7v3%m!(4khjj3ux$(f8^zts)ko8jt'
 
-DEBUG = False  # Set to False for production
+DEBUG = True  # Set to False for production
 
 ALLOWED_HOSTS = ['*']  
 

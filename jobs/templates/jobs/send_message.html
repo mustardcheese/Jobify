@@ -1,4 +1,4 @@
-{{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block content %}
@@ -30,6 +30,24 @@
                         <br><strong>Regarding:</strong> {{ application.job.title }} at {{ application.job.company }}
                         {% endif %}
                     </div>
+
+                    <!-- NEW: Email Setup Status -->
+                    {% if candidate.email %}
+                        {% if has_email_setup %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Email ready!</strong> Your Gmail is configured and ready to send emails to candidates.
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Email not set up.</strong> 
+                            <a href="{% url 'setup_recruiter_email' %}" class="alert-link">Set up your Gmail</a> to send emails to candidates.
+                            Without email setup, messages will only go to the candidate's Jobify inbox.
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
                     {% else %}
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
@@ -81,11 +99,45 @@
                             </div>
                         </div>
 
+                        <!-- Email Option -->
+                        {% if candidate.email %}
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="send_email" name="send_email" 
+                                       {% if request.user.profile.has_email_setup %}checked{% endif %}
+                                       {% if not request.user.profile.has_email_setup %}disabled{% endif %}>
+                                <label class="form-check-label fw-bold" for="send_email">
+                                    <i class="fas fa-envelope me-1"></i>
+                                    Send via Email
+                                    {% if not request.user.profile.has_email_setup %}
+                                    <span class="badge bg-warning ms-1">Setup Required</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                {% if request.user.profile.has_email_setup %}
+                                When checked, this message will be sent to the candidate's email address (<strong>{{ candidate.email }}</strong>) 
+                                in addition to their Jobify inbox. The candidate can reply through Jobify.
+                                {% else %}
+                                To send emails, you need to <a href="{% url 'setup_recruiter_email' %}">set up your Gmail account</a> first.
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mb-4 alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>No email address available.</strong> This candidate doesn't have an email address associated with their account. 
+                            Message will only be sent to their Jobify inbox.
+                        </div>
+                        {% endif %}
+
                         <!-- Submit Buttons -->
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="{% url 'select_candidate' %}" class="btn btn-outline-secondary">Choose Different Candidate</a>
                             <button type="submit" class="btn btn-success">
-                                <i class="fas fa-paper-plane me-2"></i>Send Message
+                                <i class="fas fa-paper-plane me-2"></i>
+                                {% if candidate.email and request.user.profile.has_email_setup %}Send Message & Email{% else %}Send Message{% endif %}
                             </button>
                         </div>
                     </form>
@@ -95,4 +147,27 @@
         </div>
     </div>
 </div>
+
+<style>
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.form-check-label {
+    font-weight: 500;
+}
+
+.alert-info {
+    border-left: 4px solid #0dcaf0;
+}
+
+.alert-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.alert-success {
+    border-left: 4px solid #198754;
+}
+</style>
 {% endblock %}

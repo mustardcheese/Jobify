@@ -81,6 +81,24 @@ class Application(models.Model):
     def __str__(self):
         return f"Application for {self.job.title} by {self.applicant.username}"
 
+    # NEW: Properties to get candidate's current email from profile
+    @property
+    def candidate_email(self):
+        """Get the candidate's current email from their profile"""
+        return self.applicant.profile.email if hasattr(self.applicant, 'profile') and self.applicant.profile.email else None
+    
+    @property 
+    def candidate_has_email(self):
+        """Check if candidate currently has an email"""
+        return bool(self.candidate_email)
+    
+    @property
+    def candidate_name(self):
+        """Get candidate's name (username as fallback)"""
+        if hasattr(self.applicant, 'profile') and self.applicant.profile.bio:
+            return self.applicant.profile.bio
+        return self.applicant.get_full_name() or self.applicant.username
+
 
 class Message(models.Model):
     MESSAGE_TYPES = [
@@ -106,6 +124,12 @@ class Message(models.Model):
     is_read = models.BooleanField(default=False)
     sent_at = models.DateTimeField(auto_now_add=True)
     
+    # NEW FIELDS FOR EMAIL FUNCTIONALITY
+    email_sent = models.BooleanField(default=False)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_failed = models.BooleanField(default=False)
+    email_failure_reason = models.TextField(blank=True)
+    
     class Meta:
         ordering = ['-sent_at']
     
@@ -121,3 +145,25 @@ class Message(models.Model):
     def recipient_is_recruiter(self):
         """Check if recipient is a recruiter using the existing UserProfile"""
         return hasattr(self.recipient, 'profile') and self.recipient.profile.user_type == 'recruiter'
+
+    # NEW METHOD FOR EMAIL STATUS
+    @property
+    def email_status(self):
+        """Get human-readable email status"""
+        if self.email_sent:
+            return f"Sent {self.email_sent_at.strftime('%b %d, %Y %H:%M')}" if self.email_sent_at else "Sent"
+        elif self.email_failed:
+            return "Failed"
+        else:
+            return "Not Sent"
+    
+    # NEW: Property to get recipient's current email
+    @property
+    def recipient_email(self):
+        """Get recipient's current email from their profile"""
+        return self.recipient.profile.email if hasattr(self.recipient, 'profile') and self.recipient.profile.email else None
+    
+    @property
+    def recipient_has_email(self):
+        """Check if recipient currently has an email"""
+        return bool(self.recipient_email)

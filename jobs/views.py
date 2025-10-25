@@ -477,7 +477,7 @@ def user_dashboard(request):
 
 @login_required
 def send_message(request, application_id=None):
-    """Send a message to a candidate"""
+    """Send a message to a candidate (with email option)"""
     # Check if user is a recruiter
     if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
         messages.error(request, 'Only recruiters can send messages.')
@@ -522,10 +522,29 @@ def send_message(request, application_id=None):
                 if not message.subject.startswith('Re:'):
                     message.subject = f"Re: Your application for {application.job.title}"
             
+            # Save the message first
             message.save()
             
+            # NEW: Send email if checkbox is checked
+            send_email = request.POST.get('send_email', False)
             recipient_name = message.recipient.get_full_name() or message.recipient.username
-            messages.success(request, f'Message sent to {recipient_name}!')
+            
+            if send_email and candidate.email:
+                # Import the email utility function
+                from .utils import send_candidate_email
+                
+                email_success, email_message = send_candidate_email(message)
+                
+                if email_success:
+                    messages.success(request, f'Message sent and email delivered to {candidate.email}!')
+                else:
+                    messages.warning(request, f'Message saved but email failed: {email_message}')
+            else:
+                if send_email and not candidate.email:
+                    messages.warning(request, f'Message sent to {recipient_name}! (No email sent - candidate has no email address)')
+                else:
+                    messages.success(request, f'Message sent to {recipient_name}!')
+            
             return redirect('sent_messages')
     else:
         initial = {}
@@ -552,11 +571,15 @@ def send_message(request, application_id=None):
                 }
         form = MessageForm(initial=initial)
     
+    # NEW: Add email setup status to context
+    has_email_setup = hasattr(request.user, 'profile') and request.user.profile.has_email_setup
+    
     context = {
         'form': form,
         'application': application,
         'candidate': candidate,
-        'recipient': candidate if candidate else None
+        'recipient': candidate if candidate else None,
+        'has_email_setup': has_email_setup,  # ADDED THIS LINE
     }
     return render(request, 'jobs/send_message.html', context)
 

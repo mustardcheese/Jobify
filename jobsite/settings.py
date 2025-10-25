@@ -130,6 +130,24 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ============================================================================
+# EMAIL CONFIGURATION - REAL EMAIL TESTING
+# ============================================================================
+
+# REAL EMAIL TESTING - This will actually send emails
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+# Note: These platform-level settings are just fallbacks/dummy values
+# Each recruiter will use THEIR OWN Gmail credentials from their profile
+EMAIL_HOST_USER = 'platform-dummy@gmail.com'  # This won't be used for recruiter emails
+EMAIL_HOST_PASSWORD = 'dummy-password'        # This won't be used for recruiter emails
+DEFAULT_FROM_EMAIL = 'Jobify <noreply@jobify.com>'
+
+# ============================================================================
+
 # Production settings for PythonAnywhere
 if not DEBUG:
     # Security settings for production

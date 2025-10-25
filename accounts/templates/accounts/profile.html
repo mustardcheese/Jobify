@@ -23,6 +23,63 @@
                     <form method="post" action="{% url 'accounts.save_profile' %}">
                         {% csrf_token %}
 
+                        <!-- EMAIL SECTION - MOVED INSIDE THE FORM -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-envelope me-2"></i>Contact Email
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% if user.profile.user_type == 'recruiter' %}
+                                <!-- Recruiter: Contact Email + Gmail Setup -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Your Contact Email</label>
+                                        {{ template_data.form.email }}
+                                        <small class="form-text text-muted">
+                                            Your public contact email
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {% if user.profile.email_configured %}
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            <strong>Gmail configured!</strong>
+                                            <br>
+                                            <small>Connected as: {{ user.profile.email_host_user }}</small>
+                                            <br>
+                                            <a href="{% url 'setup_recruiter_email' %}" class="btn btn-sm btn-outline-success mt-2">
+                                                Update Gmail Settings
+                                            </a>
+                                        </div>
+                                        {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>Gmail not setup</strong>
+                                            <br>
+                                            <small>You need to configure Gmail to send emails to candidates</small>
+                                            <br>
+                                            <a href="{% url 'setup_recruiter_email' %}" class="btn btn-sm btn-outline-warning mt-2">
+                                                Setup Gmail
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <!-- Job Seeker: Just Contact Email -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Your Email Address</label>
+                                    {{ template_data.form.email }}
+                                    <small class="form-text text-muted">
+                                        Recruiters will use this email to contact you about job opportunities
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         {% if user.profile.user_type == 'user' %}
                         <!-- Privacy Settings - ONLY FOR JOB SEEKERS -->
                         <div class="card mb-4 border-warning">
@@ -113,17 +170,27 @@
                             </button>
                         </div>
                     </form>
+
                     {% if user.profile.user_type == 'user' %}
                     <!-- View My Applications Button - ONLY FOR JOB SEEKERS -->
-                    <a href="{% url 'my_applications' %}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-briefcase me-2"></i>View My Applications
-                    </a>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'my_applications' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-briefcase me-2"></i>View My Applications
+                        </a>
+                    </div>
                     {% endif %}
 
                     <!-- Current Profile Display -->
-                    {% if template_data.profile.bio or template_data.profile.experience or template_data.profile.education or template_data.profile.skills %}
+                    {% if template_data.profile.bio or template_data.profile.experience or template_data.profile.education or template_data.profile.skills or template_data.profile.email %}
                     <hr class="my-4">
                     <h5 class="mb-3">Current Profile Preview</h5>
+                    {% endif %}
+
+                    {% if template_data.profile.email %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">Contact Email:</h6>
+                        <p class="bg-light p-3 rounded">{{ template_data.profile.email }}</p>
+                    </div>
                     {% endif %}
 
                     {% if template_data.profile.bio %}

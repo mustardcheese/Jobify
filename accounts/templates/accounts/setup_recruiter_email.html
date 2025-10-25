@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        Connect Your Gmail Account
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Display Django messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Setup Instructions:</h6>
+                        <ol class="mb-0">
+                            <li>Enable 2-Factor Authentication on your Gmail account</li>
+                            <li>Generate an <strong>App Password</strong> for Mail</li>
+                            <li>Enter your Gmail address and App Password below</li>
+                        </ol>
+                    </div>
+
+                    {% if profile.email_configured %}  <!-- CHANGED: email_verified to email_configured -->
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Email configured!</strong> You can now send emails to candidates.  <!-- CHANGED: verified to configured -->
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Display form non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.email_host_user.id_for_label }}" class="form-label fw-bold">Gmail Address</label>
+                            <input type="email" 
+                                   name="{{ form.email_host_user.name }}" 
+                                   id="{{ form.email_host_user.id_for_label }}" 
+                                   class="form-control {% if form.email_host_user.errors %}is-invalid{% endif %}" 
+                                   value="{{ form.email_host_user.value|default:'' }}" 
+                                   placeholder="your.email@gmail.com"
+                                   required>
+                            {% if form.email_host_user.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email_host_user.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email_host_password.id_for_label }}" class="form-label fw-bold">App Password</label>
+                            <input type="password" 
+                                   name="{{ form.email_host_password.name }}" 
+                                   id="{{ form.email_host_password.id_for_label }}" 
+                                   class="form-control {% if form.email_host_password.errors %}is-invalid{% endif %}" 
+                                   value="{{ form.email_host_password.value|default:'' }}" 
+                                   placeholder="Enter your 16-character app password"
+                                   required>
+                            {% if form.email_host_password.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email_host_password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <a href="https://support.google.com/accounts/answer/185833" target="_blank" class="text-decoration-none">
+                                    <i class="fas fa-external-link-alt me-1"></i>
+                                    How to generate a Gmail App Password
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check me-2"></i>
+                                Verify & Save Email Settings
+                            </button>
+                            <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>
+                                Skip for Now
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Additional Help Section -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="fw-bold mb-3"><i class="fas fa-question-circle me-2"></i>Need Help?</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li><i class="fas fa-check text-success me-2"></i>Use a Gmail account</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Enable 2FA first</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Generate app password</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled small">
+                                    <li><i class="fas fa-times text-danger me-2"></i>Don't use regular password</li>
+                                    <li><i class="fas fa-times text-danger me-2"></i>Don't use non-Gmail accounts</li>
+                                    <li><i class="fas fa-times text-danger me-2"></i>Don't disable 2FA after setup</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+.btn-success {
+    background: linear-gradient(135deg, #198754 0%, #157347 100%);
+    border: none;
+}
+.btn-success:hover {
+    background: linear-gradient(135deg, #157347 0%, #0f5734 100%);
+    transform: translateY(-1px);
+}
+.card {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 0.5rem;
+}
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+</style>
+{% endblock %}

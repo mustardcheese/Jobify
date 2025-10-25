@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: #0f2a44; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .footer { background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+        .message-content { background: #f9f9f9; padding: 15px; margin: 15px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Jobify</h1>
+        </div>
+        
+        <div class="content">
+            <h2>{{ subject }}</h2>
+            <p><strong>From:</strong> {{ sender_name }} (via Jobify)</p>
+            <p><strong>Sent:</strong> {{ sent_at|date:"F j, Y g:i A" }}</p>
+            
+            <div class="message-content">
+                {{ content|linebreaks }}
+            </div>
+            
+            {% if job_title %}
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <strong>Regarding your application for:</strong><br>
+                <strong>Position:</strong> {{ job_title }}<br>
+                {% if company %}<strong>Company:</strong> {{ company }}{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="footer">
+            <p><strong>This email was sent through Jobify Platform</strong></p>
+            <p>Please login to your Jobify account to respond to this message.</p>
+        </div>
+    </div>
+</body>
+</html>

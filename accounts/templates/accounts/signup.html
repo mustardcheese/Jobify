@@ -82,6 +82,21 @@
                 {% endif %}
               </div>
 
+              <!-- NEW: Email Field -->
+              <div class="mb-3">
+                <label for="{{ template_data.form.email.id_for_label }}" class="form-label">
+                  <i class="fas fa-envelope me-1"></i>
+                  Email Address
+                </label>
+                {{ template_data.form.email }}
+                {% if template_data.form.email.errors %}
+                  <div class="text-danger">{{ template_data.form.email.errors }}</div>
+                {% endif %}
+                <small class="form-text text-muted">
+                  This will be your contact email. Recruiters may use this to contact you.
+                </small>
+              </div>
+
               <div class="mb-3">
                 <label for="{{ template_data.form.password1.id_for_label }}" class="form-label">
                   <i class="fas fa-lock me-1"></i>

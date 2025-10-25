@@ -1,5 +1,7 @@
+# accounts/models.py
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 class UserProfile(models.Model):
     """Simple user profile with privacy controls"""
@@ -24,6 +26,13 @@ class UserProfile(models.Model):
         help_text="Account type - cannot be changed after signup"
     )
     
+    # Contact email for all users
+    email = models.EmailField(
+        blank=True, 
+        null=True, 
+        help_text="Your contact email address"
+    )
+    
     # Basic info
     bio = models.TextField(blank=True, null=True, help_text="Tell us about yourself")
     experience = models.TextField(blank=True, null=True, help_text="Your work experience")
@@ -34,9 +43,40 @@ class UserProfile(models.Model):
     profile_privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='private')
     allow_recruiters_to_contact = models.BooleanField(default=False, help_text="Allow recruiters to contact you")
     
+    # NEW: Email settings for recruiters (Gmail configuration)
+    email_host = models.CharField(max_length=255, default='smtp.gmail.com', blank=True)
+    email_port = models.IntegerField(default=587, blank=True)
+    email_use_tls = models.BooleanField(default=True)
+    email_host_user = models.EmailField(blank=True, null=True, help_text="Gmail address for sending emails")
+    email_host_password = models.CharField(max_length=255, blank=True, null=True, help_text="Gmail App Password")
+    email_configured = models.BooleanField(default=False, help_text="Gmail is configured for sending emails")
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+    
+    # NEW: Property to check if recruiter has email setup
+    @property
+    def has_email_setup(self):
+        """Check if user has email configured for their role"""
+        if self.user_type == 'recruiter':
+            return self.email_configured and self.email_host_user
+        else:
+            return bool(self.email)  # Job seekers just need a contact email
+    
+    def save(self, *args, **kwargs):
+        # Simple encryption for password (basic security)
+        if self.email_host_password and not self.email_host_password.startswith('encrypted:'):
+            # In a real app, you'd use proper encryption here
+            # For now, we'll just mark it as encrypted
+            self.email_host_password = f"encrypted:{self.email_host_password}"
+        super().save(*args, **kwargs)
+    
+    def get_email_password(self):
+        """Get the decrypted email password"""
+        if self.email_host_password and self.email_host_password.startswith('encrypted:'):
+            return self.email_host_password.replace('encrypted:', '')
+        return self.email_host_password

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .forms import CustomUserCreationForm, CustomErrorList, SimpleProfileForm
+from .forms import CustomUserCreationForm, CustomErrorList, SimpleProfileForm, JobSeekerProfileForm, RecruiterProfileForm
 from django.contrib.auth import login as auth_login, authenticate
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
@@ -31,7 +31,11 @@ def login(request):
 
         else:
             auth_login(request, user)
-            return redirect("home.index")
+            # Redirect to appropriate dashboard based on user type
+            if hasattr(user, 'profile') and user.profile.user_type == 'recruiter':
+                return redirect("recruiter_dashboard")
+            else:
+                return redirect("user_dashboard")
 
 
 def signup(request):
@@ -47,8 +51,13 @@ def signup(request):
 
         if form.is_valid():
             user = form.save()
-            # Create a profile for the new user
-            UserProfile.objects.create(user=user)
+            # Create a profile for the new user with the selected user type
+            user_type = form.cleaned_data.get('user_type', 'user')
+            UserProfile.objects.create(user=user, user_type=user_type)
+            
+            # Show success message
+            user_type_display = UserProfile.USER_TYPE_CHOICES[int(user_type == 'recruiter')][1]
+            messages.success(request, f"Account created successfully! Welcome as a {user_type_display}.")
             return redirect("accounts.login")
 
         else:
@@ -74,7 +83,14 @@ def profile(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     template_data["profile"] = profile
-    template_data["form"] = SimpleProfileForm(instance=profile)
+    
+    # Use appropriate form based on user type
+    if request.user.profile.user_type == 'recruiter':
+        form = RecruiterProfileForm(instance=profile)
+    else:
+        form = JobSeekerProfileForm(instance=profile)
+    
+    template_data["form"] = form
 
     return render(request, "accounts/profile.html", {"template_data": template_data})
 
@@ -85,7 +101,12 @@ def save_profile(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == "POST":
-        form = SimpleProfileForm(request.POST, instance=profile)
+        # Use appropriate form based on user type
+        if request.user.profile.user_type == 'recruiter':
+            form = RecruiterProfileForm(request.POST, instance=profile)
+        else:
+            form = JobSeekerProfileForm(request.POST, instance=profile)
+            
         if form.is_valid():
             form.save()
             messages.success(request, "Profile saved successfully!")

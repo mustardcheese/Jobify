@@ -23,11 +23,12 @@
                     <form method="post" action="{% url 'accounts.save_profile' %}">
                         {% csrf_token %}
 
-                        <!-- Privacy Settings - MOST IMPORTANT -->
+                        {% if user.profile.user_type == 'user' %}
+                        <!-- Privacy Settings - ONLY FOR JOB SEEKERS -->
                         <div class="card mb-4 border-warning">
                             <div class="card-header bg-warning text-dark">
                                 <h5 class="mb-0">
-                                    <i class="fas fa-shield-alt me-2"></i>Privacy Settings for Recruiters
+                                    <i class="fas fa-shield-alt me-2"></i>Privacy Settings
                                 </h5>
                             </div>
                             <div class="card-body">
@@ -51,34 +52,59 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
-                        <!-- Bio Section -->
+                        {% if user.profile.user_type == 'recruiter' %}
+                        <!-- Recruiter Profile Fields -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Full Name</label>
+                            {{ template_data.form.bio }}
+                            <small class="form-text text-muted">Your full name for professional communication</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Company</label>
+                            {{ template_data.form.experience }}
+                            <small class="form-text text-muted">The company you work for</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Position/Title</label>
+                            {{ template_data.form.education }}
+                            <small class="form-text text-muted">Your job title or position</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">About Your Company</label>
+                            {{ template_data.form.skills }}
+                            <small class="form-text text-muted">Brief description of your company and what you do</small>
+                        </div>
+                        {% else %}
+                        <!-- Job Seeker Profile Fields -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">Bio</label>
                             {{ template_data.form.bio }}
                             <small class="form-text text-muted">Tell us about yourself</small>
                         </div>
 
-                        <!-- Experience Section -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">Work Experience</label>
                             {{ template_data.form.experience }}
                             <small class="form-text text-muted">Describe your work experience</small>
                         </div>
 
-                        <!-- Education Section -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">Education</label>
                             {{ template_data.form.education }}
                             <small class="form-text text-muted">Describe your education background</small>
                         </div>
 
-                        <!-- Skills Section -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">Skills</label>
                             {{ template_data.form.skills }}
                             <small class="form-text text-muted">List your skills separated by commas</small>
                         </div>
+                        {% endif %}
 
                         <!-- Save Button -->
                         <div class="text-center">
@@ -87,10 +113,12 @@
                             </button>
                         </div>
                     </form>
-                    <!-- View My Applications Button -->
+                    {% if user.profile.user_type == 'user' %}
+                    <!-- View My Applications Button - ONLY FOR JOB SEEKERS -->
                     <a href="{% url 'my_applications' %}" class="btn btn-outline-primary btn-lg">
                         <i class="fas fa-briefcase me-2"></i>View My Applications
                     </a>
+                    {% endif %}
 
                     <!-- Current Profile Display -->
                     {% if template_data.profile.bio or template_data.profile.experience or template_data.profile.education or template_data.profile.skills %}
@@ -100,33 +128,50 @@
 
                     {% if template_data.profile.bio %}
                     <div class="mb-3">
+                        {% if user.profile.user_type == 'recruiter' %}
+                        <h6 class="text-primary">Full Name:</h6>
+                        {% else %}
                         <h6 class="text-primary">Bio:</h6>
+                        {% endif %}
                         <p class="bg-light p-3 rounded">{{ template_data.profile.bio }}</p>
                     </div>
                     {% endif %}
 
                     {% if template_data.profile.experience %}
                     <div class="mb-3">
+                        {% if user.profile.user_type == 'recruiter' %}
+                        <h6 class="text-primary">Company:</h6>
+                        {% else %}
                         <h6 class="text-primary">Experience:</h6>
+                        {% endif %}
                         <p class="bg-light p-3 rounded">{{ template_data.profile.experience|linebreaks }}</p>
                     </div>
                     {% endif %}
 
                     {% if template_data.profile.education %}
                     <div class="mb-3">
+                        {% if user.profile.user_type == 'recruiter' %}
+                        <h6 class="text-primary">Position/Title:</h6>
+                        {% else %}
                         <h6 class="text-primary">Education:</h6>
+                        {% endif %}
                         <p class="bg-light p-3 rounded">{{ template_data.profile.education|linebreaks }}</p>
                     </div>
                     {% endif %}
 
                     {% if template_data.profile.skills %}
                     <div class="mb-3">
+                        {% if user.profile.user_type == 'recruiter' %}
+                        <h6 class="text-primary">About Your Company:</h6>
+                        {% else %}
                         <h6 class="text-primary">Skills:</h6>
+                        {% endif %}
                         <p class="bg-light p-3 rounded">{{ template_data.profile.skills }}</p>
                     </div>
                     {% endif %}
 
-                    <!-- Privacy Status -->
+                    {% if user.profile.user_type == 'user' %}
+                    <!-- Privacy Status - ONLY FOR JOB SEEKERS -->
                     <div class="alert alert-info">
                         <strong>Privacy Status:</strong>
                         {% if template_data.profile.profile_privacy == 'public' %}
@@ -142,6 +187,7 @@
                         <span class="text-warning">Recruiters CANNOT contact you</span>
                         {% endif %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

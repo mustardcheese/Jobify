@@ -81,14 +81,21 @@
 
     <!-- Results Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="navy-text mb-0">
-            {% if search_query or selected_job_type or selected_experience or location_query %}
-                Search Results
-            {% else %}
-                All Job Listings
-            {% endif %}
-        </h3>
-        <span class="badge navy-bg eggshell-text fs-6">{{ results_count }} job{{ results_count|pluralize }} found</span>
+        <div>
+            <h3 class="navy-text mb-0">
+                {% if search_query or selected_job_type or selected_experience or location_query %}
+                    Search Results
+                {% else %}
+                    All Job Listings
+                {% endif %}
+            </h3>
+        </div>
+        <div class="d-flex align-items-center">
+            <span class="badge navy-bg eggshell-text fs-6 me-3">{{ results_count }} job{{ results_count|pluralize }} found</span>
+            <a href="{% url 'job_map' %}" class="btn btn-outline-success">
+                <i class="fas fa-map-marked-alt me-1"></i> Map View
+            </a>
+        </div>
     </div>
 
     <!-- Active Filters Display -->

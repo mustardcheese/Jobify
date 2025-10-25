@@ -14,21 +14,109 @@
 
           <div class="card-body">
 
-            <h2>Sign Up</h2>
-
-            <hr />
+            <h2 class="navy-text mb-4">
+              <i class="fas fa-user-plus me-2"></i>
+              Create Your Account
+            </h2>
 
             <form method="POST">
-
               {% csrf_token %}
 
-              {{ template_data.form.as_p }}
+              <!-- Account Type Selection -->
+              <div class="mb-4">
+                <label class="form-label fw-bold">
+                  <i class="fas fa-users me-1"></i>
+                  {{ template_data.form.user_type.label }}
+                </label>
+                <p class="text-muted small">{{ template_data.form.user_type.help_text }}</p>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card border-2" id="user-card">
+                      <div class="card-body text-center">
+                        <input type="radio" name="user_type" value="user" id="id_user_type_0" 
+                               class="form-check-input" style="display: none;" checked>
+                        <i class="fas fa-user fa-3x navy-text mb-3"></i>
+                        <h5 class="card-title navy-text">Job Seeker</h5>
+                        <p class="card-text text-muted">Find and apply to jobs</p>
+                        <ul class="list-unstyled text-start">
+                          <li><i class="fas fa-check text-success me-2"></i>Browse job listings</li>
+                          <li><i class="fas fa-check text-success me-2"></i>Get job recommendations</li>
+                          <li><i class="fas fa-check text-success me-2"></i>Track applications</li>
+                          <li><i class="fas fa-check text-success me-2"></i>View job locations on map</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card border-2" id="recruiter-card">
+                      <div class="card-body text-center">
+                        <input type="radio" name="user_type" value="recruiter" id="id_user_type_1" 
+                               class="form-check-input" style="display: none;">
+                        <i class="fas fa-briefcase fa-3x navy-text mb-3"></i>
+                        <h5 class="card-title navy-text">Recruiter</h5>
+                        <p class="card-text text-muted">Post jobs and find talent</p>
+                        <ul class="list-unstyled text-start">
+                          <li><i class="fas fa-check text-success me-2"></i>Create job postings</li>
+                          <li><i class="fas fa-check text-success me-2"></i>Pin locations on map</li>
+                          <li><i class="fas fa-check text-success me-2"></i>Manage applications</li>
+                          <li><i class="fas fa-check text-success me-2"></i>View analytics</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              <button type="submit"
+              <hr class="my-4">
 
-                class="btn bg-dark text-white">Sign Up
+              <!-- Basic Account Information -->
+              <div class="mb-3">
+                <label for="{{ template_data.form.username.id_for_label }}" class="form-label">
+                  <i class="fas fa-user me-1"></i>
+                  Username
+                </label>
+                {{ template_data.form.username }}
+                {% if template_data.form.username.errors %}
+                  <div class="text-danger">{{ template_data.form.username.errors }}</div>
+                {% endif %}
+              </div>
 
-              </button>
+              <div class="mb-3">
+                <label for="{{ template_data.form.password1.id_for_label }}" class="form-label">
+                  <i class="fas fa-lock me-1"></i>
+                  Password
+                </label>
+                {{ template_data.form.password1 }}
+                {% if template_data.form.password1.errors %}
+                  <div class="text-danger">{{ template_data.form.password1.errors }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-4">
+                <label for="{{ template_data.form.password2.id_for_label }}" class="form-label">
+                  <i class="fas fa-lock me-1"></i>
+                  Confirm Password
+                </label>
+                {{ template_data.form.password2 }}
+                {% if template_data.form.password2.errors %}
+                  <div class="text-danger">{{ template_data.form.password2.errors }}</div>
+                {% endif %}
+              </div>
+
+              <div class="d-grid">
+                <button type="submit" class="btn navy-bg eggshell-text btn-lg">
+                  <i class="fas fa-user-plus me-2"></i>
+                  Create Account
+                </button>
+              </div>
+
+              <div class="text-center mt-3">
+                <p class="text-muted">
+                  Already have an account? 
+                  <a href="{% url 'accounts.login' %}" class="navy-text fw-bold">Sign In</a>
+                </p>
+              </div>
 
             </form>
 
@@ -43,5 +131,72 @@
   </div>
 
 </div>
+
+<style>
+.navy-bg {
+    background-color: #1e3a8a;
+    border-color: #1e3a8a;
+}
+
+.navy-bg:hover {
+    background-color: #1e40af;
+    border-color: #1e40af;
+}
+
+.navy-text {
+    color: #1e3a8a;
+}
+
+.eggshell-text {
+    color: #f8f9fa;
+}
+
+#user-card, #recruiter-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#user-card:hover, #recruiter-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#user-card.selected, #recruiter-card.selected {
+    border-color: #1e3a8a !important;
+    background-color: #f8f9ff;
+}
+
+.form-control:focus {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userCard = document.getElementById('user-card');
+    const recruiterCard = document.getElementById('recruiter-card');
+    const userRadio = document.getElementById('id_user_type_0');
+    const recruiterRadio = document.getElementById('id_user_type_1');
+
+    function selectCard(card, radio) {
+        // Remove selected class from both cards
+        userCard.classList.remove('selected');
+        recruiterCard.classList.remove('selected');
+        
+        // Add selected class to clicked card
+        card.classList.add('selected');
+        
+        // Check the corresponding radio button
+        radio.checked = true;
+    }
+
+    userCard.addEventListener('click', () => selectCard(userCard, userRadio));
+    recruiterCard.addEventListener('click', () => selectCard(recruiterCard, recruiterRadio));
+
+    // Set initial selection
+    selectCard(userCard, userRadio);
+});
+</script>
 
 {% endblock content %}

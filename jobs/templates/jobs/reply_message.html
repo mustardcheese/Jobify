@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Back Link -->
+            <a href="{% url 'message_detail' original_message.id %}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Message
+            </a>
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-reply me-2"></i>Reply to Message
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Original Message Preview -->
+                    <div class="alert alert-light border mb-4">
+                        <h6 class="mb-2">Original Message:</h6>
+                        <div class="d-flex justify-content-between">
+                            <strong>From: {{ original_message.sender.get_full_name|default:original_message.sender.username }}</strong>
+                            <small class="text-muted">{{ original_message.sent_at|date:"M d, Y g:i A" }}</small>
+                        </div>
+                        <p class="mb-1"><strong>Subject:</strong> {{ original_message.subject }}</p>
+                        <div class="bg-white p-2 rounded mt-2">
+                            {{ original_message.content|linebreaks }}
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Subject -->
+                        <div class="mb-3">
+                            <label for="{{ form.subject.id_for_label }}" class="form-label fw-bold">Subject</label>
+                            {{ form.subject }}
+                            {% if form.subject.errors %}
+                                <div class="text-danger small">{{ form.subject.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Message Type (hidden) -->
+                        <div class="mb-3" style="display: none;">
+                            {{ form.message_type }}
+                        </div>
+
+                        <!-- Content -->
+                        <div class="mb-4">
+                            <label for="{{ form.content.id_for_label }}" class="form-label fw-bold">Your Reply</label>
+                            {{ form.content }}
+                            {% if form.content.errors %}
+                                <div class="text-danger small">{{ form.content.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Write your reply to {{ original_message.sender.get_full_name|default:original_message.sender.username }}.
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'message_detail' original_message.id %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Send Reply
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Application, Job
+from .models import Application, Job, Message
 
 
 class QuickApplyForm(forms.ModelForm):
@@ -47,6 +47,11 @@ class TraditionalApplyForm(forms.ModelForm):
             "application_note": "Personalized Message *",
             "resume": "Upload Resume *",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["resume"].required = True
+        self.fields["application_note"].required = True
 
 
 class ApplicationStatusForm(forms.ModelForm):
@@ -144,3 +149,61 @@ class JobCreationForm(forms.ModelForm):
         if company and len(company.strip()) < 2:
             raise forms.ValidationError("Company name must be at least 2 characters long.")
         return company
+
+
+class MessageForm(forms.ModelForm):
+    """Form for sending messages between recruiters and candidates"""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['subject'].required = True
+        self.fields['content'].required = True
+        self.fields['message_type'].required = True
+        
+        # If the subject starts with "Re:", make it read-only (for replies)
+        if self.initial.get('subject', '').startswith('Re:'):
+            self.fields['subject'].widget.attrs['readonly'] = True
+    
+    class Meta:
+        model = Message
+        fields = ['subject', 'content', 'message_type']
+        widgets = {
+            'subject': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter message subject...'
+            }),
+            'content': forms.Textarea(attrs={
+                'rows': 6,
+                'class': 'form-control',
+                'placeholder': 'Type your message here...'
+            }),
+            'message_type': forms.Select(attrs={
+                'class': 'form-select'
+            })
+        }
+        labels = {
+            'subject': 'Subject *',
+            'content': 'Message *',
+            'message_type': 'Message Type'
+        }
+
+
+class JobEmployerForm(forms.ModelForm):
+    """Form to set employer for existing jobs (admin use)"""
+    
+    class Meta:
+        model = Job
+        fields = ['employer']
+        widgets = {
+            'employer': forms.Select(attrs={'class': 'form-control'})
+        }
+        labels = {
+            'employer': 'Job Poster'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['employer'].required = True
+        self.fields['employer'].queryset = self.fields['employer'].queryset.filter(
+            profile__user_type='recruiter'
+        )

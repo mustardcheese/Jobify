@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Back Link -->
+            <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Select Candidate to Message
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Select a candidate from your applicants to send them a message.
+                    </div>
+
+                    {% if candidates %}
+                    <div class="row">
+                        {% for candidate_info in candidates %}
+                        {% with candidate=candidate_info.candidate applications=candidate_info.applications %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ candidate.get_full_name|default:candidate.username }}</h6>
+                                    <p class="card-text text-muted mb-1">
+                                        <i class="fas fa-envelope me-1"></i>{{ candidate.email }}
+                                    </p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-file-alt me-1"></i>
+                                            {{ candidate_info.application_count }} application{{ candidate_info.application_count|pluralize }}
+                                        </small>
+                                    </p>
+                                    
+                                    <!-- Show recent applications -->
+                                    {% if applications %}
+                                    <div class="mt-2">
+                                        <small class="text-muted"><strong>Recent Applications:</strong></small>
+                                        {% for app in applications|slice:":2" %}
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <span class="small text-truncate">{{ app.job.title }}</span>
+                                            <span class="badge bg-{% if app.status == 'applied' %}primary{% elif app.status == 'interview' %}warning{% elif app.status == 'offer' %}success{% else %}secondary{% endif %} small">
+                                                {{ app.get_status_display }}
+                                            </span>
+                                        </div>
+                                        {% endfor %}
+                                        {% if candidate_info.application_count > 2 %}
+                                        <small class="text-muted">+{{ candidate_info.application_count|add:"-2" }} more</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-footer">
+                                    <a href="{% url 'send_message' %}?candidate_id={{ candidate.id }}" class="btn btn-success btn-sm w-100">
+                                        <i class="fas fa-paper-plane me-1"></i>Message Candidate
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No candidates found</h5>
+                        <p class="text-muted">You don't have any applicants yet. When candidates apply to your jobs, they'll appear here.</p>
+                        <a href="{% url 'create_job' %}" class="btn navy-bg eggshell-text">
+                            <i class="fas fa-plus me-1"></i>Create Job Posting
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

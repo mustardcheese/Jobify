@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="navy-text">
+                    <i class="fas fa-inbox me-2"></i>Inbox
+                    {% if unread_count > 0 %}
+                    <span class="badge bg-danger ms-2">{{ unread_count }} unread</span>
+                    {% endif %}
+                </h1>
+                <a href="{% url 'sent_messages' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-paper-plane me-1"></i>Sent Messages
+                </a>
+            </div>
+
+            <!-- CHANGED: Use user_messages instead of messages -->
+            {% if user_messages %}
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for message in user_messages %}
+                        <a href="{% url 'message_detail' message.id %}" 
+                           class="list-group-item list-group-item-action {% if not message.is_read %}bg-light{% endif %}">
+                            <div class="row align-items-center">
+                                <div class="col-md-1 text-center">
+                                    {% if not message.is_read %}
+                                    <span class="badge bg-primary">New</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <strong>{{ message.sender.get_full_name|default:message.sender.username }}</strong>
+                                    {% if message.sender.profile.company %}
+                                    <br><small class="text-muted">{{ message.sender.profile.company }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-5">
+                                    <h6 class="mb-1">{{ message.subject }}</h6>
+                                    <p class="mb-1 text-muted small text-truncate">{{ message.content }}</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <span class="badge bg-secondary">{{ message.get_message_type_display }}</span>
+                                    {% if message.application %}
+                                    <br><small class="text-muted">Re: {{ message.application.job.title }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <small class="text-muted">{{ message.sent_at|date:"M d, Y" }}</small>
+                                    <br><small class="text-muted">{{ message.sent_at|time }}</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-inbox fa-2x mb-3"></i>
+                <h4>No messages yet</h4>
+                <p class="mb-0">When recruiters message you, they'll appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

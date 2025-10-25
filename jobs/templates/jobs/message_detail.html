@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Back Link -->
+            <a href="{% url 'inbox' %}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Inbox
+            </a>
+
+            <div class="card">
+                <div class="card-header {% if message.sender == request.user %}bg-success text-white{% else %}navy-bg eggshell-text{% endif %}">
+                    <h4 class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>{{ message.subject }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Message Header -->
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>From:</strong> {{ message.sender.get_full_name|default:message.sender.username }}
+                                {% if message.sender.profile.company %}
+                                <br><small class="text-muted">{{ message.sender.profile.company }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>To:</strong> {{ message.recipient.get_full_name|default:message.recipient.username }}
+                                <br><small class="text-muted">{{ message.sent_at|date:"F j, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge bg-secondary">{{ message.get_message_type_display }}</span>
+                            {% if message.application %}
+                            <span class="badge bg-info">Re: {{ message.application.job.title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Message Content -->
+                    <div class="mb-4">
+                        <h6>Message:</h6>
+                        <div class="bg-light p-3 rounded">
+                            {{ message.content|linebreaks }}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+<!-- In the Action Buttons section of message_detail.html -->
+                    <div class="d-flex gap-2">
+                        {% if message.recipient == request.user %}
+                        <a href="{% url 'reply_message' message.id %}" class="btn btn-primary">
+                            <i class="fas fa-reply me-2"></i>Reply
+                        </a>
+                        {% endif %}
+                        
+                        {% if message.application and message.sender == request.user %}
+                        <a href="{% url 'view_application' message.application.id %}" class="btn btn-outline-info">
+                            <i class="fas fa-eye me-2"></i>View Application
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'inbox' %}" class="btn btn-outline-secondary ms-auto">
+                            <i class="fas fa-inbox me-2"></i>Back to Inbox
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

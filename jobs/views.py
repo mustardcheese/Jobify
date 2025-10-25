@@ -6,9 +6,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import requests
-from .models import Job, Application
-from .forms import QuickApplyForm, TraditionalApplyForm, JobCreationForm
-
+from .models import Job, Application, Message
+from .forms import QuickApplyForm, TraditionalApplyForm, JobCreationForm, MessageForm
+from django.contrib.auth.models import User
 
 def job_list(request):
     # Get all active jobs initially
@@ -194,25 +194,6 @@ def job_map(request):
     context = {"template_data": {"title": "Job Map"}, "jobs": jobs}
     return render(request, "jobs/job_map.html", context)
 
-@login_required
-def my_applications(request):
-    """View for users to see their applications"""
-    applications = Application.objects.filter(applicant=request.user).order_by(
-        "-applied_at"
-    )
-
-    context = {
-        "applications": applications,
-    }
-    return render(request, "jobs/applications.html", context)
-
-
-def job_map(request):
-    jobs = Job.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
-
-    context = {"template_data": {"title": "Job Map"}, "jobs": jobs}
-    return render(request, "jobs/job_map.html", context)
-
 
 @login_required
 def job_recommendations(request):
@@ -223,7 +204,7 @@ def job_recommendations(request):
     user_skills = [s.strip().lower() for s in raw_skills.split(",") if s.strip()]
 
     if not user_skills:
-        messages.info(request, "You haven’t added any skills yet. Update your profile to get recommendations.")
+        messages.info(request, "You haven't added any skills yet. Update your profile to get recommendations.")
         return render(request, "jobs/recommendations.html", {
             "recommended_jobs": [],
             "user_skills": [],
@@ -337,6 +318,9 @@ def create_job(request):
         if form.is_valid():
             job = form.save(commit=False)
             
+            # Set the current user as employer
+            job.employer = request.user
+            
             # Geocode the location to get coordinates
             location_data = geocode_location(job.location)
             if location_data:
@@ -365,17 +349,30 @@ def recruiter_dashboard(request):
     if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
         messages.error(request, "Access denied. This feature is only available for recruiters.")
         return redirect('job_list')
-    # Get all jobs (assuming all users can see all jobs for now)
-    # In a real app, you'd filter by the recruiter/company
-    jobs = Job.objects.all().order_by('-posted_at')
+    
+    # Get jobs posted by this recruiter
+    jobs = Job.objects.filter(employer=request.user).order_by('-posted_at')
+    
+    # Get applications for this recruiter's jobs
+    applications = Application.objects.filter(job__employer=request.user).order_by('-applied_at')
+    
+    # Get recent messages sent by this recruiter
+    recent_messages = Message.objects.filter(sender=request.user).order_by('-sent_at')[:5]
+    
+    # ADD THESE LINES: Get unread messages for notifications
+    unread_messages = Message.objects.filter(recipient=request.user, is_read=False)
+    unread_count = unread_messages.count()
     
     context = {
         'jobs': jobs,
-        'total_jobs': jobs.count()
+        'applications': applications,
+        'recent_messages': recent_messages,
+        'total_jobs': jobs.count(),
+        'total_applications': applications.count(),
+        'unread_count': unread_count,  # ADD THIS
+        'unread_messages': unread_messages[:5],  # ADD THIS for recent unread messages
     }
     return render(request, 'jobs/recruiter_dashboard.html', context)
-
-
 
 
 @csrf_exempt
@@ -425,6 +422,10 @@ def user_dashboard(request):
     # Get user's applications
     applications = Application.objects.filter(applicant=request.user).order_by('-applied_at')
     
+    # Get recent messages
+    recent_messages = Message.objects.filter(recipient=request.user).order_by('-sent_at')[:5]
+    unread_count = Message.objects.filter(recipient=request.user, is_read=False).count()
+    
     # Get job recommendations
     profile = request.user.profile
     raw_skills = profile.skills or ""
@@ -464,5 +465,246 @@ def user_dashboard(request):
         'applications': applications,
         'recommended_jobs': recommended_jobs,
         'total_jobs': total_jobs,
+        'recent_messages': recent_messages,
+        'unread_count': unread_count,
     }
     return render(request, 'jobs/user_dashboard.html', context)
+
+
+# ============================================================================
+# MESSAGING VIEWS
+# ============================================================================
+
+@login_required
+def send_message(request, application_id=None):
+    """Send a message to a candidate"""
+    # Check if user is a recruiter
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can send messages.')
+        return redirect('user_dashboard')
+    
+    application = None
+    candidate = None
+    
+    if application_id:
+        application = get_object_or_404(Application, id=application_id)
+        # Verify the recruiter has access to this application
+        if application.job.employer != request.user:
+            messages.error(request, 'You do not have permission to message this candidate.')
+            return redirect('recruiter_dashboard')
+        candidate = application.applicant
+    
+    # Handle candidate selection from GET parameter
+    candidate_id = request.GET.get('candidate_id')
+    if candidate_id and not candidate:
+        candidate = get_object_or_404(User, id=candidate_id)
+        # Verify this candidate applied to recruiter's jobs
+        if not Application.objects.filter(applicant=candidate, job__employer=request.user).exists():
+            messages.error(request, 'This candidate has not applied to any of your jobs.')
+            return redirect('select_candidate')
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = request.user
+            
+            # Get candidate from POST or existing context
+            candidate_id = request.POST.get('candidate_id')
+            if candidate_id:
+                candidate = get_object_or_404(User, id=candidate_id)
+            
+            if candidate:
+                message.recipient = candidate
+            
+            if application:
+                message.application = application
+                if not message.subject.startswith('Re:'):
+                    message.subject = f"Re: Your application for {application.job.title}"
+            
+            message.save()
+            
+            recipient_name = message.recipient.get_full_name() or message.recipient.username
+            messages.success(request, f'Message sent to {recipient_name}!')
+            return redirect('sent_messages')
+    else:
+        initial = {}
+        if application:
+            initial = {
+                'subject': f"Regarding your application for {application.job.title}",
+                'message_type': 'application'
+            }
+        elif candidate:
+            # Get the most recent application for context
+            recent_app = Application.objects.filter(
+                applicant=candidate, 
+                job__employer=request.user
+            ).first()
+            if recent_app:
+                initial = {
+                    'subject': f"Regarding your application for {recent_app.job.title}",
+                    'message_type': 'application'
+                }
+            else:
+                initial = {
+                    'subject': f"Regarding your application",
+                    'message_type': 'application'
+                }
+        form = MessageForm(initial=initial)
+    
+    context = {
+        'form': form,
+        'application': application,
+        'candidate': candidate,
+        'recipient': candidate if candidate else None
+    }
+    return render(request, 'jobs/send_message.html', context)
+
+@login_required
+def select_candidate(request):
+    """View for recruiters to select which candidate to message"""
+    # Check if user is a recruiter
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can send messages.')
+        return redirect('user_dashboard')
+    
+    # Get all unique candidates who applied to this recruiter's jobs
+    candidates = User.objects.filter(
+        job_applications__job__employer=request.user
+    ).distinct()
+    
+    # Get application counts for each candidate
+    candidate_data = []
+    for candidate in candidates:
+        applications = Application.objects.filter(
+            applicant=candidate,
+            job__employer=request.user
+        )
+        candidate_data.append({
+            'candidate': candidate,
+            'applications': applications,
+            'application_count': applications.count()
+        })
+    
+    context = {
+        'candidates': candidate_data,
+    }
+    return render(request, 'jobs/select_candidate.html', context)
+
+@login_required
+def inbox(request):
+    """View received messages"""
+    user_messages = Message.objects.filter(recipient=request.user).order_by('-sent_at')
+    unread_count = user_messages.filter(is_read=False).count()
+    
+    # Mark messages as read when viewing inbox
+    user_messages.filter(is_read=False).update(is_read=True)
+    
+    context = {
+        'user_messages': user_messages,  
+        'unread_count': unread_count
+    }
+    return render(request, 'jobs/inbox.html', context)
+
+
+@login_required
+def sent_messages(request):
+    """View sent messages"""
+    sent_messages = Message.objects.filter(sender=request.user).order_by('-sent_at')
+    
+    context = {
+        'sent_messages': sent_messages
+    }
+    return render(request, 'jobs/sent_messages.html', context)
+
+
+@login_required
+def message_detail(request, message_id):
+    """View a specific message"""
+    message = get_object_or_404(Message, id=message_id)
+    
+    # Verify user has permission to view this message
+    if message.recipient != request.user and message.sender != request.user:
+        messages.error(request, 'You do not have permission to view this message.')
+        return redirect('inbox')
+    
+    # Mark as read if recipient is viewing
+    if message.recipient == request.user and not message.is_read:
+        message.is_read = True
+        message.save()
+    
+    context = {
+        'message': message
+    }
+    return render(request, 'jobs/message_detail.html', context)
+
+
+@login_required
+def reply_message(request, message_id):
+    """Reply to a message"""
+    original_message = get_object_or_404(Message, id=message_id)
+    
+    if original_message.recipient != request.user:
+        messages.error(request, 'You can only reply to messages sent to you.')
+        return redirect('inbox')
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = request.user
+            message.recipient = original_message.sender
+            message.application = original_message.application
+            message.save()
+            
+            messages.success(request, 'Reply sent successfully!')
+            return redirect('inbox')
+    else:
+        # Pre-fill the form with reply information
+        form = MessageForm(initial={
+            'subject': f"Re: {original_message.subject}",
+            'content': f"\n\n--- Original Message ---\nFrom: {original_message.sender.get_full_name() or original_message.sender.username}\nSent: {original_message.sent_at.strftime('%Y-%m-%d %H:%M')}\n\n{original_message.content}",
+            'message_type': 'application'
+        })
+        # Make subject field read-only
+        form.fields['subject'].widget.attrs['readonly'] = True
+        form.fields['subject'].widget.attrs['class'] = 'form-control bg-light'
+        form.fields['subject'].widget.attrs['style'] = 'cursor: not-allowed;'
+    
+    context = {
+        'form': form,
+        'original_message': original_message
+    }
+    return render(request, 'jobs/reply_message.html', context)
+
+
+@login_required
+def view_application(request, application_id):
+    """View application details (for recruiters)"""
+    application = get_object_or_404(Application, id=application_id)
+    
+    # Verify the employer has access to this application
+    if application.job.employer != request.user and not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to view this application.')
+        return redirect('recruiter_dashboard')
+    
+    # Get messages related to this application
+    application_messages = Message.objects.filter(application=application).order_by('sent_at')  # CHANGED variable name
+    
+    context = {
+        'application': application,
+        'application_messages': application_messages,  # CHANGED from 'messages'
+    }
+    return render(request, 'jobs/view_application.html', context)
+
+@login_required
+def dashboard(request):
+    """Universal dashboard that redirects based on user type"""
+    if not hasattr(request.user, 'profile'):
+        messages.info(request, 'Please complete your profile setup.')
+        return redirect('job_list')
+    
+    if request.user.profile.user_type == 'recruiter':
+        return redirect('recruiter_dashboard')
+    else:
+        return redirect('user_dashboard')

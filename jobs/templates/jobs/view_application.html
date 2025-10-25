@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Back Link -->
+    <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-secondary mb-3">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Application Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Application Details
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>{{ application.job.title }}</h5>
+                            <p class="text-muted mb-1">{{ application.job.company }}</p>
+                            <p class="mb-1"><strong>Applicant:</strong> {{ application.applicant.get_full_name|default:application.applicant.username }}</p>
+                            <p class="mb-1"><strong>Email:</strong> {{ application.applicant.email }}</p>
+                            <p class="mb-0"><strong>Applied:</strong> {{ application.applied_at|date:"F j, Y" }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-{% if application.status == 'offer' %}success{% elif application.status == 'interview' %}warning{% elif application.status == 'closed' %}danger{% else %}info{% endif %} fs-6">
+                                {{ application.get_status_display }}
+                            </span>
+                            {% if application.resume %}
+                            <div class="mt-2">
+                                <a href="{{ application.resume.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                                    <i class="fas fa-download me-1"></i>Download Resume
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if application.application_note %}
+                    <div class="mb-3">
+                        <h6>Applicant's Message:</h6>
+                        <div class="bg-light p-3 rounded">
+                            {{ application.application_note|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Message Button -->
+                    <div class="mt-4">
+                        <a href="{% url 'send_message_to_candidate' application.id %}" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Message Candidate
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message History -->
+            <div class="card">
+                <div class="card-header navy-bg eggshell-text">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Message History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if application_messages %}  <!-- CHANGED from messages -->
+                        <div class="list-group list-group-flush">
+                            {% for msg in application_messages %}  <!-- CHANGED from messages -->
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        {% if msg.sender == request.user %}
+                                        You to {{ msg.recipient.get_full_name|default:msg.recipient.username }}
+                                        {% else %}
+                                        {{ msg.sender.get_full_name|default:msg.sender.username }} to you
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">{{ msg.sent_at|date:"M j, g:i A" }}</small>
+                                </div>
+                                <p class="mb-1"><strong>{{ msg.subject }}</strong></p>
+                                <p class="mb-1 text-muted">{{ msg.content|truncatewords:20 }}</p>
+                                <a href="{% url 'message_detail' msg.id %}" class="btn btn-outline-primary btn-sm mt-1">
+                                    View Full Message
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0">No messages yet for this application.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'send_message_to_candidate' application.id %}" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Send Message
+                        </a>
+                        <a href="mailto:{{ application.applicant.email }}" class="btn btn-outline-primary">
+                            <i class="fas fa-envelope me-2"></i>Email Directly
+                        </a>
+                        <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list me-2"></i>All Applications
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

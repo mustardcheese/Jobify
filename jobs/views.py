@@ -3,8 +3,11 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+import requests
 from .models import Job, Application
-from .forms import QuickApplyForm, TraditionalApplyForm
+from .forms import QuickApplyForm, TraditionalApplyForm, JobCreationForm
 
 
 def job_list(request):
@@ -259,3 +262,207 @@ def job_recommendations(request):
         "recommended_jobs": recommended_jobs,
         "user_skills": user_skills,
     })
+
+
+def geocode_location(location_text):
+    """
+    Geocode a location string to get latitude and longitude coordinates.
+    Uses OpenStreetMap Nominatim API (free, no API key required).
+    """
+    if not location_text or not location_text.strip():
+        return None
+        
+    try:
+        # Use OpenStreetMap Nominatim API
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            'q': location_text.strip(),
+            'format': 'json',
+            'limit': 1,
+            'addressdetails': 1,
+            'countrycodes': '',  # Allow global search
+            'bounded': 0,  # Don't restrict to specific bounds
+        }
+        headers = {
+            'User-Agent': 'Jobify/1.0 (job posting location mapping)'
+        }
+        
+        response = requests.get(url, params=params, headers=headers, timeout=15)
+        response.raise_for_status()
+        
+        data = response.json()
+        if data and len(data) > 0:
+            result = data[0]
+            # Validate coordinates
+            lat = float(result['lat'])
+            lng = float(result['lon'])
+            
+            # Basic coordinate validation
+            if -90 <= lat <= 90 and -180 <= lng <= 180:
+                return {
+                    'latitude': lat,
+                    'longitude': lng,
+                    'display_name': result.get('display_name', location_text.strip())
+                }
+            else:
+                print(f"Invalid coordinates: lat={lat}, lng={lng}")
+                return None
+        else:
+            print(f"No results found for location: {location_text}")
+            return None
+            
+    except requests.exceptions.Timeout:
+        print(f"Geocoding timeout for location: {location_text}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Geocoding request error for {location_text}: {e}")
+        return None
+    except (ValueError, KeyError) as e:
+        print(f"Geocoding data parsing error for {location_text}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected geocoding error for {location_text}: {e}")
+        return None
+
+
+@login_required
+def create_job(request):
+    """View for recruiters to create new job postings with location mapping"""
+    # Check if user is a recruiter
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
+        messages.error(request, "Access denied. This feature is only available for recruiters.")
+        return redirect('job_list')
+    if request.method == 'POST':
+        form = JobCreationForm(request.POST)
+        if form.is_valid():
+            job = form.save(commit=False)
+            
+            # Geocode the location to get coordinates
+            location_data = geocode_location(job.location)
+            if location_data:
+                job.latitude = location_data['latitude']
+                job.longitude = location_data['longitude']
+                messages.success(request, f"✅ Job created successfully! Location mapped: {location_data['display_name']}")
+            else:
+                messages.warning(request, "⚠️ Job created but location could not be mapped. You can add coordinates manually in the admin panel.")
+            
+            job.save()
+            return redirect('recruiter_dashboard')
+    else:
+        form = JobCreationForm()
+    
+    context = {
+        'form': form,
+        'title': 'Create New Job Posting'
+    }
+    return render(request, 'jobs/create_job.html', context)
+
+
+@login_required
+def recruiter_dashboard(request):
+    """Dashboard for recruiters to manage their job postings"""
+    # Check if user is a recruiter
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
+        messages.error(request, "Access denied. This feature is only available for recruiters.")
+        return redirect('job_list')
+    # Get all jobs (assuming all users can see all jobs for now)
+    # In a real app, you'd filter by the recruiter/company
+    jobs = Job.objects.all().order_by('-posted_at')
+    
+    context = {
+        'jobs': jobs,
+        'total_jobs': jobs.count()
+    }
+    return render(request, 'jobs/recruiter_dashboard.html', context)
+
+
+
+
+@csrf_exempt
+def geocode_ajax(request):
+    """AJAX endpoint for geocoding locations"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            location = data.get('location', '')
+            
+            if location:
+                result = geocode_location(location)
+                if result:
+                    return JsonResponse({
+                        'success': True,
+                        'latitude': result['latitude'],
+                        'longitude': result['longitude'],
+                        'display_name': result['display_name']
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Location not found'
+                    })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No location provided'
+                })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def user_dashboard(request):
+    """Dashboard for job seekers"""
+    # Check if user is a job seeker
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'user':
+        messages.error(request, "Access denied. This feature is only available for job seekers.")
+        return redirect('recruiter_dashboard')
+    
+    # Get user's applications
+    applications = Application.objects.filter(applicant=request.user).order_by('-applied_at')
+    
+    # Get job recommendations
+    profile = request.user.profile
+    raw_skills = profile.skills or ""
+    user_skills = [s.strip().lower() for s in raw_skills.split(",") if s.strip()]
+    
+    recommended_jobs = []
+    if user_skills:
+        # Build query across multiple fields
+        query = Q()
+        for skill in user_skills:
+            query |= (
+                Q(title__icontains=skill) |
+                Q(description__icontains=skill) |
+                Q(requirements__icontains=skill)
+            )
+        
+        jobs = Job.objects.filter(is_active=True).filter(query).distinct()
+        
+        # Rank jobs by number of matched skills
+        ranked_jobs = []
+        for job in jobs:
+            job_text = f"{job.title} {job.description} {job.requirements}".lower()
+            match_count = sum(1 for skill in user_skills if skill in job_text)
+            if match_count > 0:
+                ranked_jobs.append((job, match_count))
+        
+        ranked_jobs.sort(key=lambda x: x[1], reverse=True)
+        
+        for job, count in ranked_jobs[:6]:  # Limit to 6 recommendations
+            job.match_count = count
+            recommended_jobs.append(job)
+    
+    # Get job statistics
+    total_jobs = Job.objects.filter(is_active=True).count()
+    
+    context = {
+        'applications': applications,
+        'recommended_jobs': recommended_jobs,
+        'total_jobs': total_jobs,
+    }
+    return render(request, 'jobs/user_dashboard.html', context)

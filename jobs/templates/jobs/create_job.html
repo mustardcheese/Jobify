@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="navy-text mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ title }}
+                    </h2>
+                    <p class="text-muted mb-0">Pin your job location on the map for better candidate visibility</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="job-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.title.label_tag }}
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger">{{ form.title.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.company.label_tag }}
+                                    {{ form.company }}
+                                    {% if form.company.errors %}
+                                        <div class="text-danger">{{ form.company.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.job_type.label_tag }}
+                                    {{ form.job_type }}
+                                    {% if form.job_type.errors %}
+                                        <div class="text-danger">{{ form.job_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.experience_level.label_tag }}
+                                    {{ form.experience_level }}
+                                    {% if form.experience_level.errors %}
+                                        <div class="text-danger">{{ form.experience_level.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.salary_range.label_tag }}
+                            {{ form.salary_range }}
+                            {% if form.salary_range.errors %}
+                                <div class="text-danger">{{ form.salary_range.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Location Section with Map -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{ form.location.label }}
+                            </label>
+                            <div class="input-group">
+                                {{ form.location }}
+                                <button type="button" class="btn btn-outline-secondary" id="geocode-btn">
+                                    <i class="fas fa-search-location"></i> Find on Map
+                                </button>
+                            </div>
+                            {% if form.location.errors %}
+                                <div class="text-danger">{{ form.location.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Enter a full address (e.g., "123 Main St, San Francisco, CA") for best results
+                            </small>
+                        </div>
+
+                        <!-- Map Preview -->
+                        <div class="mb-4" id="map-section" style="display: none;">
+                            <label class="form-label">Location Preview</label>
+                            <div id="location-map" style="height: 300px; border-radius: 8px; border: 1px solid #dee2e6;"></div>
+                            <div id="location-info" class="mt-2 text-muted"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label_tag }}
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.requirements.label_tag }}
+                            {{ form.requirements }}
+                            {% if form.requirements.errors %}
+                                <div class="text-danger">{{ form.requirements.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'recruiter_dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn navy-bg eggshell-text">
+                                <i class="fas fa-save me-1"></i> 
+                                {% if job %}Update Job{% else %}Create Job{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+let map;
+let marker;
+let currentLocation = null;
+
+// Initialize map when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize map (hidden initially)
+    map = L.map('location-map').setView([37.7749, -122.4194], 10);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    
+    // If editing existing job with coordinates, show them
+    {% if job and job.latitude and job.longitude %}
+        showLocationOnMap({{ job.latitude }}, {{ job.longitude }}, "{{ job.location|escapejs }}");
+    {% endif %}
+});
+
+// Geocode button click handler
+document.getElementById('geocode-btn').addEventListener('click', function() {
+    const locationInput = document.getElementById('location-input');
+    const location = locationInput.value.trim();
+    
+    if (!location) {
+        alert('Please enter a location first');
+        return;
+    }
+    
+    // Show loading state
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finding...';
+    this.disabled = true;
+    
+    // Make AJAX request to geocode
+    fetch('{% url "geocode_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ location: location })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showLocationOnMap(data.latitude, data.longitude, data.display_name);
+        } else {
+            alert('Location not found. Please try a more specific address.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error finding location. Please try again.');
+    })
+    .finally(() => {
+        this.innerHTML = '<i class="fas fa-search-location"></i> Find on Map';
+        this.disabled = false;
+    });
+});
+
+function showLocationOnMap(lat, lng, displayName) {
+    currentLocation = { lat: lat, lng: lng, name: displayName };
+    
+    // Update map view
+    map.setView([lat, lng], 13);
+    
+    // Remove existing marker
+    if (marker) {
+        map.removeLayer(marker);
+    }
+    
+    // Add new marker
+    marker = L.marker([lat, lng]).addTo(map);
+    marker.bindPopup(`<b>Job Location</b><br>${displayName}`).openPopup();
+    
+    // Show map section
+    document.getElementById('map-section').style.display = 'block';
+    document.getElementById('location-info').innerHTML = 
+        `<i class="fas fa-check-circle text-success me-1"></i>Location found: ${displayName}`;
+}
+
+// Form submission - add coordinates if available
+document.getElementById('job-form').addEventListener('submit', function(e) {
+    if (currentLocation) {
+        // Add hidden inputs for coordinates
+        const latInput = document.createElement('input');
+        latInput.type = 'hidden';
+        latInput.name = 'latitude';
+        latInput.value = currentLocation.lat;
+        
+        const lngInput = document.createElement('input');
+        lngInput.type = 'hidden';
+        lngInput.name = 'longitude';
+        lngInput.value = currentLocation.lng;
+        
+        this.appendChild(latInput);
+        this.appendChild(lngInput);
+    }
+});
+</script>
+
+<style>
+#location-map {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.navy-bg {
+    background-color: #1e3a8a;
+    border-color: #1e3a8a;
+}
+
+.navy-bg:hover {
+    background-color: #1e40af;
+    border-color: #1e40af;
+}
+
+.navy-text {
+    color: #1e3a8a;
+}
+</style>
+{% endblock content %}

@@ -10,4 +10,10 @@ urlpatterns = [
     path('<int:job_id>/quick-apply/form/', views.quick_apply_form, name='quick_apply_form'),
     path('my-applications/', views.my_applications, name='my_applications'),
     path('recommendations/', views.job_recommendations, name='job_recommendations'),
+    # User dashboard
+    path('user/dashboard/', views.user_dashboard, name='user_dashboard'),
+    # Recruiter views
+    path('recruiter/dashboard/', views.recruiter_dashboard, name='recruiter_dashboard'),
+    path('recruiter/create/', views.create_job, name='create_job'),
+    path('api/geocode/', views.geocode_ajax, name='geocode_ajax'),
 ]

@@ -12,13 +12,24 @@ class CustomErrorList(ErrorList):
 
 
 class CustomUserCreationForm(UserCreationForm):
+    user_type = forms.ChoiceField(
+        choices=UserProfile.USER_TYPE_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Account Type",
+        help_text="Choose your account type. This cannot be changed after signup.",
+        initial='user'
+    )
+    
     def __init__(self, *args, **kwargs):
         super(CustomUserCreationForm, self).__init__(*args, **kwargs)
         for fieldname in ['username', 'password1','password2']:
             self.fields[fieldname].help_text = None
             self.fields[fieldname].widget.attrs.update({'class': 'form-control'})
+        
+        # Style the user type field
+        self.fields['user_type'].widget.attrs.update({'class': 'form-check-input'})
 
-class SimpleProfileForm(forms.ModelForm):
+class JobSeekerProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = ['bio', 'experience', 'education', 'skills', 'profile_privacy', 'allow_recruiters_to_contact']
@@ -30,3 +41,17 @@ class SimpleProfileForm(forms.ModelForm):
             'profile_privacy': forms.Select(attrs={'class': 'form-control'}),
             'allow_recruiters_to_contact': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+class RecruiterProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['bio', 'experience', 'education', 'skills']
+        widgets = {
+            'bio': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your full name...'}),
+            'experience': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your company name...'}),
+            'education': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your job title or position...'}),
+            'skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe your company and what you do...'}),
+        }
+
+# Keep the old name for backward compatibility
+SimpleProfileForm = JobSeekerProfileForm

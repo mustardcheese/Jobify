@@ -4,12 +4,25 @@ from django.contrib.auth.models import User
 class UserProfile(models.Model):
     """Simple user profile with privacy controls"""
     
+    USER_TYPE_CHOICES = [
+        ('user', 'Job Seeker'),
+        ('recruiter', 'Recruiter'),
+    ]
+    
     PRIVACY_CHOICES = [
         ('public', 'Public - Visible to all recruiters'),
         ('private', 'Private - Only visible to you'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    
+    # User type - cannot be changed after signup
+    user_type = models.CharField(
+        max_length=10, 
+        choices=USER_TYPE_CHOICES, 
+        default='user',
+        help_text="Account type - cannot be changed after signup"
+    )
     
     # Basic info
     bio = models.TextField(blank=True, null=True, help_text="Tell us about yourself")

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render  # FIXED: Changed 'rom' to 'from'
 from .forms import CustomUserCreationForm, CustomErrorList, SimpleProfileForm, JobSeekerProfileForm, RecruiterProfileForm, RecruiterEmailForm
 from django.contrib.auth import login as auth_login, authenticate
 from django.shortcuts import redirect
@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from .models import UserProfile
 from jobs.models import Application
-from jobs.utils import test_email_connection  # Import the test function
+from jobs.utils import test_email_connection 
 
 
 def login(request):
@@ -52,18 +52,27 @@ def signup(request):
 
         if form.is_valid():
             user = form.save()
-            # Create a profile for the new user with the selected user type and email
-            user_type = form.cleaned_data.get('user_type', 'user')
-            email = form.cleaned_data.get('email', '')
-            UserProfile.objects.create(
-                user=user, 
-                user_type=user_type,
-                email=email  # Save the email to profile
-            )
+            # The signal will automatically create the UserProfile
+            # Just update the profile with additional fields if needed
+            try:
+                profile = user.profile
+                profile.user_type = form.cleaned_data.get('user_type', 'user')
+                profile.email = form.cleaned_data.get('email', '')
+                profile.save()
+            except UserProfile.DoesNotExist:
+                # Fallback: create profile if signal didn't work
+                UserProfile.objects.create(
+                    user=user, 
+                    user_type=form.cleaned_data.get('user_type', 'user'),
+                    email=form.cleaned_data.get('email', '')
+                )
             
             # Show success message
-            user_type_display = UserProfile.USER_TYPE_CHOICES[int(user_type == 'recruiter')][1]
-            messages.success(request, f"Account created successfully! Welcome as a {user_type_display}.")
+            user_type = form.cleaned_data.get('user_type', 'user')
+            user_type_display = dict(UserProfile.USER_TYPE_CHOICES).get(user_type, 'User')
+            messages.success(request, f"Account created successfully! Welcome as a {user_type_display}. Please log in to continue.")
+            
+            # Redirect to login page instead of auto-login
             return redirect("accounts.login")
 
         else:
@@ -71,7 +80,6 @@ def signup(request):
             return render(
                 request, "accounts/signup.html", {"template_data": template_data}
             )
-
 
 @login_required
 def logout(request):

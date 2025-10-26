@@ -2,8 +2,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save  # ADD THIS IMPORT
+from django.dispatch import receiver  # ADD THIS IMPORT
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 def geocode_zip(zip_code):
     try:
@@ -97,3 +101,19 @@ class UserProfile(models.Model):
         if self.email_host_password and self.email_host_password.startswith('encrypted:'):
             return self.email_host_password.replace('encrypted:', '')
         return self.email_host_password
+
+# SIGNALS - Make sure these are at the bottom
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Create UserProfile automatically when a new User is created"""
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Save UserProfile automatically when User is saved"""
+    try:
+        instance.profile.save()
+    except UserProfile.DoesNotExist:
+        # If profile doesn't exist, create it
+        UserProfile.objects.get_or_create(user=instance)

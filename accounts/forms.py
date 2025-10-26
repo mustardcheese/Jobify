@@ -65,7 +65,7 @@ class CustomUserCreationForm(UserCreationForm):
 class JobSeekerProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['bio', 'experience', 'education', 'skills', 'profile_privacy', 'allow_recruiters_to_contact', 'latitude', 'longitude']
+        fields = ['bio', 'experience', 'education', 'skills', 'profile_privacy', 'allow_recruiters_to_contact', 'latitude', 'longitude', 'city']
         widgets = {
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
@@ -77,8 +77,7 @@ class JobSeekerProfileForm(forms.ModelForm):
             'skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'List your skills separated by commas...'}),
             'profile_privacy': forms.Select(attrs={'class': 'form-control'}),
             'allow_recruiters_to_contact': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'latitude': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your latitude...'}),
-            'longitude': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your longitude...'}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your city...'}),
         }
 
 class RecruiterProfileForm(forms.ModelForm):

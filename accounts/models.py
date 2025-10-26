@@ -8,15 +8,20 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import requests
 
-def geocode_zip(zip_code):
+def geocode_city(city_name):
     try:
-        geolocator = Nominatim(user_agent="job_map_app")
-        location = geolocator.geocode(zip_code)
-        if location:
-            return location.latitude, location.longitude
+        url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        if "results" in data and len(data["results"]) > 0:
+            loc = data["results"][0]
+            return loc["latitude"], loc["longitude"]
+        else:
+            print(f"No results found in data: {data}")
     except Exception as e:
-        print(f"Error geocoding ZIP code {zip_code}: {e}")
+        print(f"Error geocoding city {city_name}: {e}")
     return None, None
 
 class UserProfile(models.Model):
@@ -69,6 +74,7 @@ class UserProfile(models.Model):
     
     
     #location
+    city = models.CharField(max_length=255, blank=True, null=True, help_text="city for geolocation")
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
 
@@ -94,6 +100,16 @@ class UserProfile(models.Model):
             # In a real app, you'd use proper encryption here
             # For now, we'll just mark it as encrypted
             self.email_host_password = f"encrypted:{self.email_host_password}"
+        if self.city and (self.latitude is None or self.longitude is None):
+            lat, lng = geocode_city(self.city)
+            if lat and lng:
+                self.latitude = lat
+                self.longitude = lng
+                print(f"Geocoded city {self.city} → lat: {lat}, lng: {lng}")
+            else:
+                print(f"Could not geocode city: {self.city}")
+        else:
+            print("City not provided or already has coordinates.")
         super().save(*args, **kwargs)
     
     def get_email_password(self):

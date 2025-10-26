@@ -9,6 +9,24 @@ import requests
 from .models import Job, Application, Message
 from .forms import QuickApplyForm, TraditionalApplyForm, JobCreationForm, MessageForm
 from django.contrib.auth.models import User
+from geopy.geocoders import Nominatim
+from math import radians, cos, sin, asin, sqrt
+
+def geocode_zip(zip_code):
+    """Return (latitude, longitude) for a ZIP code using OpenStreetMap."""
+    url = f"https://nominatim.openstreetmap.org/search?q={zip_code}&format=json&limit=1"
+    headers = {"User-Agent": "job_map_app"}  # required by Nominatim
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
+        if data:
+            lat = float(data[0]['lat'])
+            lon = float(data[0]['lon'])
+            print(f"✅ Geocoded {zip_code}: ({lat}, {lon})")  # you can check this in console
+            return lat, lon
+    except Exception as e:
+        print("Error geocoding:", e)
+    return None, None
 
 def job_list(request):
     # Get all active jobs initially
@@ -187,11 +205,36 @@ def my_applications(request):
     }
     return render(request, "jobs/applications.html", context)
 
+def haversine(lat1, lon1, lat2, lon2):
+    # convert decimal degrees to radians 
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    # haversine formula 
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    r = 3956  # Radius of earth in miles
+    return c * r
 
 def job_map(request):
     jobs = Job.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    user_lat, user_lng = None, None
+    zip_code = request.GET.get('zip_code')
+    radius = request.GET.get('radius')
+    
+    if zip_code and radius:
+        radius = float(radius)
+        user_lat, user_lng = geocode_zip(zip_code)
 
-    context = {"template_data": {"title": "Job Map"}, "jobs": jobs}
+        if user_lat and user_lng:
+            jobs = [
+                job for job in jobs
+                if job.latitude and job.longitude and
+                haversine(user_lat, user_lng, job.latitude, job.longitude) <= radius
+            ]
+        else:
+            print("Could not geocode ZIP code")
+    context = {"template_data": {"title": "Job Map"}, "jobs": jobs, "user_lat": user_lat, "user_lng": user_lng}
     return render(request, "jobs/job_map.html", context)
 
 
@@ -374,6 +417,26 @@ def recruiter_dashboard(request):
     }
     return render(request, 'jobs/recruiter_dashboard.html', context)
 
+@login_required
+def recruiter_applicants_map(request):
+
+    # Get all applications
+    applications = Application.objects.filter(job__employer=request.user).order_by('-applied_at')
+    print("applications:", applications)  # Debugging line
+    # Collect applicants with valid zip codes
+    applicants = []
+    for app in applications:
+        profile = getattr(app.applicant, 'profile', None)
+        if profile and profile.latitude and profile.longitude:
+                applicants.append({
+                    'username': app.applicant.username,
+                    'lat': profile.latitude,
+                    'lng': profile.longitude
+                })
+    print("applicants:", applicants)  # Debugging line
+    return render(request, 'jobs/recruiter_applicants_map.html', {
+        'applicants': applicants,
+    })
 
 @csrf_exempt
 def geocode_ajax(request):

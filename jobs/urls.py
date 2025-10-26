@@ -19,6 +19,7 @@ urlpatterns = [
     path('recruiter/dashboard/', views.recruiter_dashboard, name='recruiter_dashboard'),
     path('recruiter/create/', views.create_job, name='create_job'),
     path('api/geocode/', views.geocode_ajax, name='geocode_ajax'),
+    path('recruiter/applicants/map/', views.recruiter_applicants_map, name='recruiter_applicants_map'),
     
     # Universal dashboard (redirects based on user type)
     path('dashboard/', views.dashboard, name='dashboard'),

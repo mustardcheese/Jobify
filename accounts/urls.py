@@ -9,4 +9,5 @@ urlpatterns = [
     path("profile/save/", views.save_profile, name="accounts.save_profile"),
     path("my-applications/", views.user_applications, name="user_applications"),
     path('recruiter/email-setup/', views.setup_recruiter_email, name='setup_recruiter_email'),
+    path("search-candidates/", views.search_candidates, name="search_candidates"),
 ]

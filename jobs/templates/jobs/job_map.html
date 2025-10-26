@@ -35,6 +35,25 @@
                 <i class="fas fa-map me-2"></i>
                 Interactive Job Map
             </h5>
+
+            <form method="GET" class="mb-3">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" name="zip_code" class="form-control" placeholder="Enter ZIP code" value="{{ request.GET.zip_code }}">
+        </div>
+        <div class="col-md-2">
+            <input type="number" name="radius" class="form-control" placeholder="Radius (miles)" value="{{ request.GET.radius }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+        </div>
+
+        <div class="col-md-2">
+            <a href="{% url 'job_map' %}" class="btn btn-outline-secondary w-100">Clear Filter</a>
+        </div>
+
+    </div>
+</form>
         </div>
         <div class="card-body p-0">
             <div id="map" style="height: 600px; width: 100%; border-radius: 0 0 8px 8px;"></div>
@@ -61,9 +80,28 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+<div id="map-data"
+     data-user-lat="{{ user_lat|default_if_none:'' }}"
+     data-user-lng="{{ user_lng|default_if_none:'' }}">
+</div>
+
 <script>
-  // Initialize the map
-  var map = L.map('map').setView([33.7490, -84.3880], 10);
+  var defaultLat = 33.7490;
+  var defaultLng = -84.3880;
+  var defaultZoom = 10;
+
+  // Get data attributes
+  var mapData = document.getElementById("map-data");
+  var userLat = parseFloat(mapData.dataset.userLat);
+  var userLng = parseFloat(mapData.dataset.userLng);
+
+  // If geocoded values exist, use them to center map
+  var map;
+  if (!isNaN(userLat) && !isNaN(userLng)) {
+      map = L.map('map').setView([userLat, userLng], 11);
+  } else {
+      map = L.map('map').setView([defaultLat, defaultLng], defaultZoom);
+  }
 
   // Add OpenStreetMap tiles
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

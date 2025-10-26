@@ -8,7 +8,8 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from .models import UserProfile
 from jobs.models import Application
-from jobs.utils import test_email_connection 
+from jobs.utils import test_email_connection
+from django.db.models import Q 
 
 
 def login(request):
@@ -190,3 +191,37 @@ def setup_recruiter_email(request):
         'profile': profile
     }
     return render(request, 'accounts/setup_recruiter_email.html', context)
+
+@login_required
+def search_candidates(request):
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
+        messages.error(request, "You must be a recruiter to access this page.")
+        return redirect('home.index')
+
+    skill = request.GET.get('skill', '')
+    city = request.GET.get('city', '')
+    project = request.GET.get('project', '')
+
+    print("DEBUG:", skill, city, project)  # 👈 Add this line
+
+    candidates = UserProfile.objects.filter(user_type='user', profile_privacy='public')
+
+    if skill:
+        candidates = candidates.filter(skills__icontains=skill)
+    if city:
+        candidates = candidates.filter(city__icontains=city)
+    if project:
+        candidates = candidates.filter(projects__icontains=project)
+
+    print("RESULT COUNT:", candidates.count())  # 👈 Add this line too
+
+    context = {
+        'template_data': {
+            'title': 'Search Candidates',
+            'candidates': candidates,
+            'skill': skill,
+            'city': city,
+            'project': project,
+        }
+    }
+    return render(request, 'accounts/search_candidates.html', context)

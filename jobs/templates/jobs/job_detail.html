@@ -4,180 +4,193 @@
 {% block content %}
 <div class="container mt-4">
     <!-- Back to Jobs Link -->
-    <a href="{% url 'job_list' %}" class="btn btn-outline-secondary mb-3">
-        <i class="fas fa-arrow-left me-2"></i>Back to Jobs
-    </a>
+    <div class="mb-4">
+        {% if request.GET.from_dashboard %}
+        <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+        </a>
+        {% else %}
+        <a href="{% url 'job_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Back to Jobs
+        </a>
+        {% endif %}
+    </div>
+
 
     <!-- Display messages -->
     {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i
+            class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
     {% endif %}
 
     <!-- Job Details Card -->
     <div class="card mb-4">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-3">
-    <div>
-        <h1 class="navy-text">{{ job.title }}</h1>
-        <h3 class="text-muted">{{ job.company }}</h3>
-    </div>
-    <div class="text-end">
-        <span class="badge {% if job.job_type == 'remote' %}bg-success{% else %}navy-bg{% endif %} eggshell-text fs-6">
-            {{ job.get_job_type_display }}
-        </span>
-        <span class="badge bg-warning text-dark fs-6 ms-1">
-            {{ job.get_experience_level_display }}
-        </span>
-    </div>
-</div>
+                <div>
+                    <h1 class="navy-text">{{ job.title }}</h1>
+                    <h3 class="text-muted">{{ job.company }}</h3>
+                </div>
+                <div class="text-end">
+                    <span
+                        class="badge {% if job.job_type == 'remote' %}bg-success{% else %}navy-bg{% endif %} eggshell-text fs-6">
+                        {{ job.get_job_type_display }}
+                    </span>
+                    <span class="badge bg-warning text-dark fs-6 ms-1">
+                        {{ job.get_experience_level_display }}
+                    </span>
+                </div>
+            </div>
 
-<div class="row mb-3">
-    <div class="col-md-6">
-        <p class="mb-1">
-            <i class="fas fa-map-marker-alt me-2"></i>
-            <strong>Location:</strong> {{ job.location }}
-        </p>
-        {% if job.salary_range %}
-        <p class="mb-1">
-            <i class="fas fa-money-bill-wave me-2"></i>
-            <strong>Salary:</strong> {{ job.salary_range }}
-        </p>
-        {% endif %}
-        <p class="mb-0">
-            <i class="fas fa-clock me-2"></i>
-            <strong>Posted:</strong> {{ job.posted_at|date:"M d, Y" }}
-        </p>
-    </div>
-</div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <p class="mb-1">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        <strong>Location:</strong> {{ job.location }}
+                    </p>
+                    {% if job.salary_range %}
+                    <p class="mb-1">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        <strong>Salary:</strong> {{ job.salary_range }}
+                    </p>
+                    {% endif %}
+                    <p class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>Posted:</strong> {{ job.posted_at|date:"M d, Y" }}
+                    </p>
+                </div>
+            </div>
 
             <!-- Application Buttons -->
             <div class="mb-4">
                 {% if user.is_authenticated %}
-                    {% if has_applied %}
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>Application Submitted!</strong>
-                            <br>
-                            <small>Applied on: {{ user_application.applied_at|date:"M d, Y" }}</small>
-                            {% if not user_application.resume %}
-                            <div class="mt-2">
-                                <a href="{% url 'quick_apply_form' job.id %}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-file-upload me-1"></i>Add Required Resume
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <div class="d-flex gap-2 flex-wrap">
-                            <!-- Quick Apply -->
-                                <form method="post" action="{% url 'quick_apply' job.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-success btn-lg">
-                                        <i class="fas fa-bolt me-2"></i>Quick Apply
-                                    </button>
-                                </form>
-                            
-                            <!-- Traditional Apply -->
-                            <a href="{% url 'apply_to_job' job.id %}" class="btn navy-bg eggshell-text btn-lg">
-                                <i class="fas fa-edit me-2"></i>Traditional Apply
-                            </a>
-                        </div>
-                        
-                        <!-- Application Options Explanation -->
-                        <div class="mt-3">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card bg-light border-success">
-                                        <div class="card-body py-2">
-                                            <h6 class="card-title text-success">
-                                                <i class="fas fa-bolt me-2"></i>Quick Apply
-                                            </h6>
-                                            <p class="card-text small mb-0">
-                                                <strong>Fast track:</strong> Resume required, message optional
-                                            </p>
-                                            <ul class="small mt-1 mb-0">
-                                                <li> Resume required</li>
-                                                <li> Message optional</li>
-                                                <li> Fastest complete application</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card bg-light border-primary">
-                                        <div class="card-body py-2">
-                                            <h6 class="card-title navy-text">
-                                                <i class="fas fa-edit me-2"></i>Traditional Apply
-                                            </h6>
-                                            <p class="card-text small mb-0">
-                                                <strong>Complete application:</strong> Resume and message required
-                                            </p>
-                                            <ul class="small mt-1 mb-0">
-                                                <li> Resume required</li>
-                                                <li> Message required</li>
-                                                <li> Most professional</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Please <a href="#">login</a> to apply for this job.
+                {% if has_applied %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Application Submitted!</strong>
+                    <br>
+                    <small>Applied on: {{ user_application.applied_at|date:"M d, Y" }}</small>
+                    {% if not user_application.resume %}
+                    <div class="mt-2">
+                        <a href="{% url 'quick_apply_form' job.id %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-file-upload me-1"></i>Add Required Resume
+                        </a>
                     </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="d-flex gap-2 flex-wrap">
+                    <!-- Quick Apply -->
+                    <form method="post" action="{% url 'quick_apply' job.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-bolt me-2"></i>Quick Apply
+                        </button>
+                    </form>
+
+                    <!-- Traditional Apply -->
+                    <a href="{% url 'apply_to_job' job.id %}" class="btn navy-bg eggshell-text btn-lg">
+                        <i class="fas fa-edit me-2"></i>Traditional Apply
+                    </a>
+                </div>
+
+                <!-- Application Options Explanation -->
+                <div class="mt-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light border-success">
+                                <div class="card-body py-2">
+                                    <h6 class="card-title text-success">
+                                        <i class="fas fa-bolt me-2"></i>Quick Apply
+                                    </h6>
+                                    <p class="card-text small mb-0">
+                                        <strong>Fast track:</strong> Resume required, message optional
+                                    </p>
+                                    <ul class="small mt-1 mb-0">
+                                        <li> Resume required</li>
+                                        <li> Message optional</li>
+                                        <li> Fastest complete application</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light border-primary">
+                                <div class="card-body py-2">
+                                    <h6 class="card-title navy-text">
+                                        <i class="fas fa-edit me-2"></i>Traditional Apply
+                                    </h6>
+                                    <p class="card-text small mb-0">
+                                        <strong>Complete application:</strong> Resume and message required
+                                    </p>
+                                    <ul class="small mt-1 mb-0">
+                                        <li> Resume required</li>
+                                        <li> Message required</li>
+                                        <li> Most professional</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Please <a href="#">login</a> to apply for this job.
+                </div>
                 {% endif %}
             </div>
 
-<!-- Job Description -->
-<div class="mb-4">
-    <h4 class="navy-text">Job Description</h4>
-    <div class="bg-light p-3 rounded">
-        {{ job.description|linebreaks }}
-    </div>
-</div>
+            <!-- Job Description -->
+            <div class="mb-4">
+                <h4 class="navy-text">Job Description</h4>
+                <div class="bg-light p-3 rounded">
+                    {{ job.description|linebreaks }}
+                </div>
+            </div>
 
-<!-- Requirements -->
-{% if job.requirements %}
-<div class="mb-4">
-    <h4 class="navy-text">Requirements</h4>
-    <div class="bg-light p-3 rounded">
-        {{ job.requirements|linebreaks }}
-    </div>
-</div>
-{% endif %}
+            <!-- Requirements -->
+            {% if job.requirements %}
+            <div class="mb-4">
+                <h4 class="navy-text">Requirements</h4>
+                <div class="bg-light p-3 rounded">
+                    {{ job.requirements|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
 
-<!-- Related Jobs -->
-{% if related_jobs %}
-<div class="card">
-    <div class="card-body">
-        <h4 class="navy-text mb-3">Related Jobs</h4>
-        <div class="row">
-            {% for related_job in related_jobs %}
-            <div class="col-md-6">
-                <div class="card mb-2">
-                    <div class="card-body py-2">
-                        <h6 class="card-title mb-1">
-                            <a href="{% url 'job_detail' related_job.id %}">{{ related_job.title }}</a>
-                        </h6>
-                        <p class="card-text small mb-1">{{ related_job.company }} • {{ related_job.location }}</p>
-                        <span class="badge bg-light text-dark small">{{ related_job.get_job_type_display }}</span>
+            <!-- Related Jobs -->
+            {% if related_jobs %}
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="navy-text mb-3">Related Jobs</h4>
+                    <div class="row">
+                        {% for related_job in related_jobs %}
+                        <div class="col-md-6">
+                            <div class="card mb-2">
+                                <div class="card-body py-2">
+                                    <h6 class="card-title mb-1">
+                                        <a href="{% url 'job_detail' related_job.id %}">{{ related_job.title }}</a>
+                                    </h6>
+                                    <p class="card-text small mb-1">{{ related_job.company }} • {{ related_job.location
+                                        }}</p>
+                                    <span class="badge bg-light text-dark small">{{ related_job.get_job_type_display
+                                        }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% endif %}
+            {% endif %}
         </div>
     </div>
 </div>

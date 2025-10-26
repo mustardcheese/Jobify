@@ -11,6 +11,8 @@ from .forms import QuickApplyForm, TraditionalApplyForm, JobCreationForm, Messag
 from django.contrib.auth.models import User
 from geopy.geocoders import Nominatim
 from math import radians, cos, sin, asin, sqrt
+from django.core.exceptions import PermissionDenied
+
 
 def geocode_zip(zip_code):
     """Return (latitude, longitude) for a ZIP code using OpenStreetMap."""
@@ -20,13 +22,16 @@ def geocode_zip(zip_code):
         response = requests.get(url, headers=headers, timeout=10)
         data = response.json()
         if data:
-            lat = float(data[0]['lat'])
-            lon = float(data[0]['lon'])
-            print(f"✅ Geocoded {zip_code}: ({lat}, {lon})")  # you can check this in console
+            lat = float(data[0]["lat"])
+            lon = float(data[0]["lon"])
+            print(
+                f"✅ Geocoded {zip_code}: ({lat}, {lon})"
+            )  # you can check this in console
             return lat, lon
     except Exception as e:
         print("Error geocoding:", e)
     return None, None
+
 
 def job_list(request):
     # Get all active jobs initially
@@ -205,36 +210,45 @@ def my_applications(request):
     }
     return render(request, "jobs/applications.html", context)
 
+
 def haversine(lat1, lon1, lat2, lon2):
-    # convert decimal degrees to radians 
+    # convert decimal degrees to radians
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
     r = 3956  # Radius of earth in miles
     return c * r
+
 
 def job_map(request):
     jobs = Job.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
     user_lat, user_lng = None, None
-    zip_code = request.GET.get('zip_code')
-    radius = request.GET.get('radius')
-    
+    zip_code = request.GET.get("zip_code")
+    radius = request.GET.get("radius")
+
     if zip_code and radius:
         radius = float(radius)
         user_lat, user_lng = geocode_zip(zip_code)
 
         if user_lat and user_lng:
             jobs = [
-                job for job in jobs
-                if job.latitude and job.longitude and
-                haversine(user_lat, user_lng, job.latitude, job.longitude) <= radius
+                job
+                for job in jobs
+                if job.latitude
+                and job.longitude
+                and haversine(user_lat, user_lng, job.latitude, job.longitude) <= radius
             ]
         else:
             print("Could not geocode ZIP code")
-    context = {"template_data": {"title": "Job Map"}, "jobs": jobs, "user_lat": user_lat, "user_lng": user_lng}
+    context = {
+        "template_data": {"title": "Job Map"},
+        "jobs": jobs,
+        "user_lat": user_lat,
+        "user_lng": user_lng,
+    }
     return render(request, "jobs/job_map.html", context)
 
 
@@ -247,19 +261,26 @@ def job_recommendations(request):
     user_skills = [s.strip().lower() for s in raw_skills.split(",") if s.strip()]
 
     if not user_skills:
-        messages.info(request, "You haven't added any skills yet. Update your profile to get recommendations.")
-        return render(request, "jobs/recommendations.html", {
-            "recommended_jobs": [],
-            "user_skills": [],
-        })
+        messages.info(
+            request,
+            "You haven't added any skills yet. Update your profile to get recommendations.",
+        )
+        return render(
+            request,
+            "jobs/recommendations.html",
+            {
+                "recommended_jobs": [],
+                "user_skills": [],
+            },
+        )
 
     # Build query across multiple fields
     query = Q()
     for skill in user_skills:
         query |= (
-            Q(title__icontains=skill) |
-            Q(description__icontains=skill) |
-            Q(requirements__icontains=skill)
+            Q(title__icontains=skill)
+            | Q(description__icontains=skill)
+            | Q(requirements__icontains=skill)
         )
 
     jobs = Job.objects.filter(is_active=True).filter(query).distinct()
@@ -280,12 +301,19 @@ def job_recommendations(request):
         recommended_jobs.append(job)
 
     if not recommended_jobs:
-        messages.warning(request, "No job recommendations found. Try adding more skills to your profile.")
+        messages.warning(
+            request,
+            "No job recommendations found. Try adding more skills to your profile.",
+        )
 
-    return render(request, "jobs/recommendations.html", {
-        "recommended_jobs": recommended_jobs,
-        "user_skills": user_skills,
-    })
+    return render(
+        request,
+        "jobs/recommendations.html",
+        {
+            "recommended_jobs": recommended_jobs,
+            "user_skills": user_skills,
+        },
+    )
 
 
 def geocode_location(location_text):
@@ -295,38 +323,36 @@ def geocode_location(location_text):
     """
     if not location_text or not location_text.strip():
         return None
-        
+
     try:
         # Use OpenStreetMap Nominatim API
         url = "https://nominatim.openstreetmap.org/search"
         params = {
-            'q': location_text.strip(),
-            'format': 'json',
-            'limit': 1,
-            'addressdetails': 1,
-            'countrycodes': '',  # Allow global search
-            'bounded': 0,  # Don't restrict to specific bounds
+            "q": location_text.strip(),
+            "format": "json",
+            "limit": 1,
+            "addressdetails": 1,
+            "countrycodes": "",  # Allow global search
+            "bounded": 0,  # Don't restrict to specific bounds
         }
-        headers = {
-            'User-Agent': 'Jobify/1.0 (job posting location mapping)'
-        }
-        
+        headers = {"User-Agent": "Jobify/1.0 (job posting location mapping)"}
+
         response = requests.get(url, params=params, headers=headers, timeout=15)
         response.raise_for_status()
-        
+
         data = response.json()
         if data and len(data) > 0:
             result = data[0]
             # Validate coordinates
-            lat = float(result['lat'])
-            lng = float(result['lon'])
-            
+            lat = float(result["lat"])
+            lng = float(result["lon"])
+
             # Basic coordinate validation
             if -90 <= lat <= 90 and -180 <= lng <= 180:
                 return {
-                    'latitude': lat,
-                    'longitude': lng,
-                    'display_name': result.get('display_name', location_text.strip())
+                    "latitude": lat,
+                    "longitude": lng,
+                    "display_name": result.get("display_name", location_text.strip()),
                 }
             else:
                 print(f"Invalid coordinates: lat={lat}, lng={lng}")
@@ -334,7 +360,7 @@ def geocode_location(location_text):
         else:
             print(f"No results found for location: {location_text}")
             return None
-            
+
     except requests.exceptions.Timeout:
         print(f"Geocoding timeout for location: {location_text}")
         return None
@@ -353,160 +379,194 @@ def geocode_location(location_text):
 def create_job(request):
     """View for recruiters to create new job postings with location mapping"""
     # Check if user is a recruiter
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
-        messages.error(request, "Access denied. This feature is only available for recruiters.")
-        return redirect('job_list')
-    if request.method == 'POST':
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(
+            request, "Access denied. This feature is only available for recruiters."
+        )
+        return redirect("job_list")
+    if request.method == "POST":
         form = JobCreationForm(request.POST)
         if form.is_valid():
             job = form.save(commit=False)
-            
+
             # Set the current user as employer
             job.employer = request.user
-            
+
             # Geocode the location to get coordinates
             location_data = geocode_location(job.location)
             if location_data:
-                job.latitude = location_data['latitude']
-                job.longitude = location_data['longitude']
-                messages.success(request, f"✅ Job created successfully! Location mapped: {location_data['display_name']}")
+                job.latitude = location_data["latitude"]
+                job.longitude = location_data["longitude"]
+                messages.success(
+                    request,
+                    f"✅ Job created successfully! Location mapped: {location_data['display_name']}",
+                )
             else:
-                messages.warning(request, "⚠️ Job created but location could not be mapped. You can add coordinates manually in the admin panel.")
-            
+                messages.warning(
+                    request,
+                    "⚠️ Job created but location could not be mapped. You can add coordinates manually in the admin panel.",
+                )
+
             job.save()
-            return redirect('recruiter_dashboard')
+            return redirect("recruiter_dashboard")
     else:
         form = JobCreationForm()
-    
-    context = {
-        'form': form,
-        'title': 'Create New Job Posting'
-    }
-    return render(request, 'jobs/create_job.html', context)
+
+    context = {"form": form, "title": "Create New Job Posting"}
+    return render(request, "jobs/create_job.html", context)
 
 
 @login_required
 def recruiter_dashboard(request):
     """Dashboard for recruiters to manage their job postings"""
-    # Check if user is a recruiter
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
-        messages.error(request, "Access denied. This feature is only available for recruiters.")
-        return redirect('job_list')
-    
-    # Get jobs posted by this recruiter
-    jobs = Job.objects.filter(employer=request.user).order_by('-posted_at')
-    
-    # Get applications for this recruiter's jobs
-    applications = Application.objects.filter(job__employer=request.user).order_by('-applied_at')
-    
-    # Get recent messages sent by this recruiter
-    recent_messages = Message.objects.filter(sender=request.user).order_by('-sent_at')[:5]
-    
-    # ADD THESE LINES: Get unread messages for notifications
-    unread_messages = Message.objects.filter(recipient=request.user, is_read=False)
-    unread_count = unread_messages.count()
-    
+    # Only recruiters
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(
+            request, "Access denied. This feature is only available for recruiters."
+        )
+        return redirect("user_dashboard")
+
+    # Jobs posted by this recruiter
+    jobs = Job.objects.filter(employer=request.user).order_by("-posted_at")
+
+    # All applications to those jobs (not sliced yet)
+    applications_qs = (
+        Application.objects.filter(job__employer=request.user)
+        .select_related("job", "applicant")
+        .order_by("-applied_at")
+    )
+
+    # Messages sent TO this recruiter
+    inbox_qs = (
+        Message.objects.filter(recipient=request.user)
+        .select_related("sender", "application")
+        .order_by("-sent_at")
+    )
+
+    # Count unread BEFORE slicing
+    unread_count = inbox_qs.filter(is_read=False).count()
+
+    # Slice for display
+    recent_messages = inbox_qs[:5]
+    recent_applications = applications_qs[:5]
+
     context = {
-        'jobs': jobs,
-        'applications': applications,
-        'recent_messages': recent_messages,
-        'total_jobs': jobs.count(),
-        'total_applications': applications.count(),
-        'unread_count': unread_count,  # ADD THIS
-        'unread_messages': unread_messages[:5],  # ADD THIS for recent unread messages
+        "jobs": jobs,
+        "applications": recent_applications,  # recent applicants preview
+        "recent_messages": recent_messages,  # last 5 inbox messages
+        "unread_count": unread_count,
+        # stats for cards
+        "total_jobs": jobs.count(),
+        "total_applications": applications_qs.count(),
     }
-    return render(request, 'jobs/recruiter_dashboard.html', context)
+    return render(request, "jobs/recruiter_dashboard.html", context)
+
 
 @login_required
 def recruiter_applicants_map(request):
-
     # Get all applications
-    applications = Application.objects.filter(job__employer=request.user).order_by('-applied_at')
+    applications = Application.objects.filter(job__employer=request.user).order_by(
+        "-applied_at"
+    )
     print("applications:", applications)  # Debugging line
     # Collect applicants with valid zip codes
     applicants = []
     for app in applications:
-        profile = getattr(app.applicant, 'profile', None)
+        profile = getattr(app.applicant, "profile", None)
         if profile and profile.latitude and profile.longitude:
-                applicants.append({
-                    'username': app.applicant.username,
-                    'lat': profile.latitude,
-                    'lng': profile.longitude
-                })
+            applicants.append(
+                {
+                    "username": app.applicant.username,
+                    "lat": profile.latitude,
+                    "lng": profile.longitude,
+                }
+            )
     print("applicants:", applicants)  # Debugging line
-    return render(request, 'jobs/recruiter_applicants_map.html', {
-        'applicants': applicants,
-    })
+    return render(
+        request,
+        "jobs/recruiter_applicants_map.html",
+        {
+            "applicants": applicants,
+        },
+    )
+
 
 @csrf_exempt
 def geocode_ajax(request):
     """AJAX endpoint for geocoding locations"""
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
             data = json.loads(request.body)
-            location = data.get('location', '')
-            
+            location = data.get("location", "")
+
             if location:
                 result = geocode_location(location)
                 if result:
-                    return JsonResponse({
-                        'success': True,
-                        'latitude': result['latitude'],
-                        'longitude': result['longitude'],
-                        'display_name': result['display_name']
-                    })
+                    return JsonResponse(
+                        {
+                            "success": True,
+                            "latitude": result["latitude"],
+                            "longitude": result["longitude"],
+                            "display_name": result["display_name"],
+                        }
+                    )
                 else:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Location not found'
-                    })
+                    return JsonResponse(
+                        {"success": False, "error": "Location not found"}
+                    )
             else:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No location provided'
-                })
+                return JsonResponse({"success": False, "error": "No location provided"})
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request method"})
 
 
 @login_required
 def user_dashboard(request):
     """Dashboard for job seekers"""
     # Check if user is a job seeker
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'user':
-        messages.error(request, "Access denied. This feature is only available for job seekers.")
-        return redirect('recruiter_dashboard')
-    
+    if not hasattr(request.user, "profile") or request.user.profile.user_type != "user":
+        messages.error(
+            request, "Access denied. This feature is only available for job seekers."
+        )
+        return redirect("recruiter_dashboard")
+
     # Get user's applications
-    applications = Application.objects.filter(applicant=request.user).order_by('-applied_at')
-    
+    applications = Application.objects.filter(applicant=request.user).order_by(
+        "-applied_at"
+    )
+
     # Get recent messages
-    recent_messages = Message.objects.filter(recipient=request.user).order_by('-sent_at')[:5]
+    recent_messages = Message.objects.filter(recipient=request.user).order_by(
+        "-sent_at"
+    )[:5]
     unread_count = Message.objects.filter(recipient=request.user, is_read=False).count()
-    
+
     # Get job recommendations
     profile = request.user.profile
     raw_skills = profile.skills or ""
     user_skills = [s.strip().lower() for s in raw_skills.split(",") if s.strip()]
-    
+
     recommended_jobs = []
     if user_skills:
         # Build query across multiple fields
         query = Q()
         for skill in user_skills:
             query |= (
-                Q(title__icontains=skill) |
-                Q(description__icontains=skill) |
-                Q(requirements__icontains=skill)
+                Q(title__icontains=skill)
+                | Q(description__icontains=skill)
+                | Q(requirements__icontains=skill)
             )
-        
+
         jobs = Job.objects.filter(is_active=True).filter(query).distinct()
-        
+
         # Rank jobs by number of matched skills
         ranked_jobs = []
         for job in jobs:
@@ -514,227 +574,249 @@ def user_dashboard(request):
             match_count = sum(1 for skill in user_skills if skill in job_text)
             if match_count > 0:
                 ranked_jobs.append((job, match_count))
-        
+
         ranked_jobs.sort(key=lambda x: x[1], reverse=True)
-        
+
         for job, count in ranked_jobs[:6]:  # Limit to 6 recommendations
             job.match_count = count
             recommended_jobs.append(job)
-    
+
     # Get job statistics
     total_jobs = Job.objects.filter(is_active=True).count()
-    
+
     context = {
-        'applications': applications,
-        'recommended_jobs': recommended_jobs,
-        'total_jobs': total_jobs,
-        'recent_messages': recent_messages,
-        'unread_count': unread_count,
+        "applications": applications,
+        "recommended_jobs": recommended_jobs,
+        "total_jobs": total_jobs,
+        "recent_messages": recent_messages,
+        "unread_count": unread_count,
     }
-    return render(request, 'jobs/user_dashboard.html', context)
+    return render(request, "jobs/user_dashboard.html", context)
 
 
 # ============================================================================
 # MESSAGING VIEWS
 # ============================================================================
 
+
 @login_required
 def send_message(request, application_id=None):
     """Send a message to a candidate (with email option)"""
     # Check if user is a recruiter
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
-        messages.error(request, 'Only recruiters can send messages.')
-        return redirect('user_dashboard')
-    
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(request, "Only recruiters can send messages.")
+        return redirect("user_dashboard")
+
     application = None
     candidate = None
-    
+
     if application_id:
         application = get_object_or_404(Application, id=application_id)
         # Verify the recruiter has access to this application
         if application.job.employer != request.user:
-            messages.error(request, 'You do not have permission to message this candidate.')
-            return redirect('recruiter_dashboard')
+            messages.error(
+                request, "You do not have permission to message this candidate."
+            )
+            return redirect("recruiter_dashboard")
         candidate = application.applicant
-    
+
     # Handle candidate selection from GET parameter
-    candidate_id = request.GET.get('candidate_id')
+    candidate_id = request.GET.get("candidate_id")
     if candidate_id and not candidate:
         candidate = get_object_or_404(User, id=candidate_id)
         # Verify this candidate applied to recruiter's jobs
-        if not Application.objects.filter(applicant=candidate, job__employer=request.user).exists():
-            messages.error(request, 'This candidate has not applied to any of your jobs.')
-            return redirect('select_candidate')
-    
-    if request.method == 'POST':
+        if not Application.objects.filter(
+            applicant=candidate, job__employer=request.user
+        ).exists():
+            messages.error(
+                request, "This candidate has not applied to any of your jobs."
+            )
+            return redirect("select_candidate")
+
+    if request.method == "POST":
         form = MessageForm(request.POST)
         if form.is_valid():
             message = form.save(commit=False)
             message.sender = request.user
-            
+
             # Get candidate from POST or existing context
-            candidate_id = request.POST.get('candidate_id')
+            candidate_id = request.POST.get("candidate_id")
             if candidate_id:
                 candidate = get_object_or_404(User, id=candidate_id)
-            
+
             if candidate:
                 message.recipient = candidate
-            
+
             if application:
                 message.application = application
-                if not message.subject.startswith('Re:'):
-                    message.subject = f"Re: Your application for {application.job.title}"
-            
+                if not message.subject.startswith("Re:"):
+                    message.subject = (
+                        f"Re: Your application for {application.job.title}"
+                    )
+
             # Save the message first
             message.save()
-            
+
             # NEW: Send email if checkbox is checked
-            send_email = request.POST.get('send_email', False)
-            recipient_name = message.recipient.get_full_name() or message.recipient.username
-            
+            send_email = request.POST.get("send_email", False)
+            recipient_name = (
+                message.recipient.get_full_name() or message.recipient.username
+            )
+
             if send_email and candidate.email:
                 # Import the email utility function
                 from .utils import send_candidate_email
-                
+
                 email_success, email_message = send_candidate_email(message)
-                
+
                 if email_success:
-                    messages.success(request, f'Message sent and email delivered to {candidate.email}!')
+                    messages.success(
+                        request,
+                        f"Message sent and email delivered to {candidate.email}!",
+                    )
                 else:
-                    messages.warning(request, f'Message saved but email failed: {email_message}')
+                    messages.warning(
+                        request, f"Message saved but email failed: {email_message}"
+                    )
             else:
                 if send_email and not candidate.email:
-                    messages.warning(request, f'Message sent to {recipient_name}! (No email sent - candidate has no email address)')
+                    messages.warning(
+                        request,
+                        f"Message sent to {recipient_name}! (No email sent - candidate has no email address)",
+                    )
                 else:
-                    messages.success(request, f'Message sent to {recipient_name}!')
-            
-            return redirect('sent_messages')
+                    messages.success(request, f"Message sent to {recipient_name}!")
+
+            return redirect("sent_messages")
     else:
         initial = {}
         if application:
             initial = {
-                'subject': f"Regarding your application for {application.job.title}",
-                'message_type': 'application'
+                "subject": f"Regarding your application for {application.job.title}",
+                "message_type": "application",
             }
         elif candidate:
             # Get the most recent application for context
             recent_app = Application.objects.filter(
-                applicant=candidate, 
-                job__employer=request.user
+                applicant=candidate, job__employer=request.user
             ).first()
             if recent_app:
                 initial = {
-                    'subject': f"Regarding your application for {recent_app.job.title}",
-                    'message_type': 'application'
+                    "subject": f"Regarding your application for {recent_app.job.title}",
+                    "message_type": "application",
                 }
             else:
                 initial = {
-                    'subject': f"Regarding your application",
-                    'message_type': 'application'
+                    "subject": f"Regarding your application",
+                    "message_type": "application",
                 }
         form = MessageForm(initial=initial)
-    
+
     # NEW: Add email setup status to context
-    has_email_setup = hasattr(request.user, 'profile') and request.user.profile.has_email_setup
-    
+    has_email_setup = (
+        hasattr(request.user, "profile") and request.user.profile.has_email_setup
+    )
+
     context = {
-        'form': form,
-        'application': application,
-        'candidate': candidate,
-        'recipient': candidate if candidate else None,
-        'has_email_setup': has_email_setup,  # ADDED THIS LINE
+        "form": form,
+        "application": application,
+        "candidate": candidate,
+        "recipient": candidate if candidate else None,
+        "has_email_setup": has_email_setup,  # ADDED THIS LINE
     }
-    return render(request, 'jobs/send_message.html', context)
+    return render(request, "jobs/send_message.html", context)
+
 
 @login_required
 def select_candidate(request):
     """View for recruiters to select which candidate to message"""
     # Check if user is a recruiter
-    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
-        messages.error(request, 'Only recruiters can send messages.')
-        return redirect('user_dashboard')
-    
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(request, "Only recruiters can send messages.")
+        return redirect("user_dashboard")
+
     # Get all unique candidates who applied to this recruiter's jobs
     candidates = User.objects.filter(
         job_applications__job__employer=request.user
     ).distinct()
-    
+
     # Get application counts for each candidate
     candidate_data = []
     for candidate in candidates:
         applications = Application.objects.filter(
-            applicant=candidate,
-            job__employer=request.user
+            applicant=candidate, job__employer=request.user
         )
-        candidate_data.append({
-            'candidate': candidate,
-            'applications': applications,
-            'application_count': applications.count()
-        })
-    
+        candidate_data.append(
+            {
+                "candidate": candidate,
+                "applications": applications,
+                "application_count": applications.count(),
+            }
+        )
+
     context = {
-        'candidates': candidate_data,
+        "candidates": candidate_data,
     }
-    return render(request, 'jobs/select_candidate.html', context)
+    return render(request, "jobs/select_candidate.html", context)
+
 
 @login_required
 def inbox(request):
     """View received messages"""
-    user_messages = Message.objects.filter(recipient=request.user).order_by('-sent_at')
+    user_messages = Message.objects.filter(recipient=request.user).order_by("-sent_at")
     unread_count = user_messages.filter(is_read=False).count()
-    
+
     # Mark messages as read when viewing inbox
     user_messages.filter(is_read=False).update(is_read=True)
-    
-    context = {
-        'user_messages': user_messages,  
-        'unread_count': unread_count
-    }
-    return render(request, 'jobs/inbox.html', context)
+
+    context = {"user_messages": user_messages, "unread_count": unread_count}
+    return render(request, "jobs/inbox.html", context)
 
 
 @login_required
 def sent_messages(request):
     """View sent messages"""
-    sent_messages = Message.objects.filter(sender=request.user).order_by('-sent_at')
-    
-    context = {
-        'sent_messages': sent_messages
-    }
-    return render(request, 'jobs/sent_messages.html', context)
+    sent_messages = Message.objects.filter(sender=request.user).order_by("-sent_at")
+
+    context = {"sent_messages": sent_messages}
+    return render(request, "jobs/sent_messages.html", context)
 
 
 @login_required
 def message_detail(request, message_id):
     """View a specific message"""
     message = get_object_or_404(Message, id=message_id)
-    
+
     # Verify user has permission to view this message
     if message.recipient != request.user and message.sender != request.user:
-        messages.error(request, 'You do not have permission to view this message.')
-        return redirect('inbox')
-    
+        messages.error(request, "You do not have permission to view this message.")
+        return redirect("inbox")
+
     # Mark as read if recipient is viewing
     if message.recipient == request.user and not message.is_read:
         message.is_read = True
         message.save()
-    
-    context = {
-        'message': message
-    }
-    return render(request, 'jobs/message_detail.html', context)
+
+    context = {"message": message}
+    return render(request, "jobs/message_detail.html", context)
 
 
 @login_required
 def reply_message(request, message_id):
     """Reply to a message"""
     original_message = get_object_or_404(Message, id=message_id)
-    
+
     if original_message.recipient != request.user:
-        messages.error(request, 'You can only reply to messages sent to you.')
-        return redirect('inbox')
-    
-    if request.method == 'POST':
+        messages.error(request, "You can only reply to messages sent to you.")
+        return redirect("inbox")
+
+    if request.method == "POST":
         form = MessageForm(request.POST)
         if form.is_valid():
             message = form.save(commit=False)
@@ -742,55 +824,144 @@ def reply_message(request, message_id):
             message.recipient = original_message.sender
             message.application = original_message.application
             message.save()
-            
-            messages.success(request, 'Reply sent successfully!')
-            return redirect('inbox')
+
+            messages.success(request, "Reply sent successfully!")
+            return redirect("inbox")
     else:
         # Pre-fill the form with reply information
-        form = MessageForm(initial={
-            'subject': f"Re: {original_message.subject}",
-            'content': f"\n\n--- Original Message ---\nFrom: {original_message.sender.get_full_name() or original_message.sender.username}\nSent: {original_message.sent_at.strftime('%Y-%m-%d %H:%M')}\n\n{original_message.content}",
-            'message_type': 'application'
-        })
+        form = MessageForm(
+            initial={
+                "subject": f"Re: {original_message.subject}",
+                "content": f"\n\n--- Original Message ---\nFrom: {original_message.sender.get_full_name() or original_message.sender.username}\nSent: {original_message.sent_at.strftime('%Y-%m-%d %H:%M')}\n\n{original_message.content}",
+                "message_type": "application",
+            }
+        )
         # Make subject field read-only
-        form.fields['subject'].widget.attrs['readonly'] = True
-        form.fields['subject'].widget.attrs['class'] = 'form-control bg-light'
-        form.fields['subject'].widget.attrs['style'] = 'cursor: not-allowed;'
-    
-    context = {
-        'form': form,
-        'original_message': original_message
-    }
-    return render(request, 'jobs/reply_message.html', context)
+        form.fields["subject"].widget.attrs["readonly"] = True
+        form.fields["subject"].widget.attrs["class"] = "form-control bg-light"
+        form.fields["subject"].widget.attrs["style"] = "cursor: not-allowed;"
+
+    context = {"form": form, "original_message": original_message}
+    return render(request, "jobs/reply_message.html", context)
 
 
 @login_required
 def view_application(request, application_id):
     """View application details (for recruiters)"""
     application = get_object_or_404(Application, id=application_id)
-    
+
     # Verify the employer has access to this application
     if application.job.employer != request.user and not request.user.is_superuser:
-        messages.error(request, 'You do not have permission to view this application.')
-        return redirect('recruiter_dashboard')
-    
+        messages.error(request, "You do not have permission to view this application.")
+        return redirect("recruiter_dashboard")
+
     # Get messages related to this application
-    application_messages = Message.objects.filter(application=application).order_by('sent_at')  # CHANGED variable name
-    
+    application_messages = Message.objects.filter(application=application).order_by(
+        "sent_at"
+    )  # CHANGED variable name
+
     context = {
-        'application': application,
-        'application_messages': application_messages,  # CHANGED from 'messages'
+        "application": application,
+        "application_messages": application_messages,  # CHANGED from 'messages'
     }
-    return render(request, 'jobs/view_application.html', context)
+    return render(request, "jobs/view_application.html", context)
+
 
 @login_required
 def dashboard(request):
     """Universal dashboard that redirects based on user type"""
-    if not hasattr(request.user, 'profile'):
-        messages.info(request, 'Please complete your profile setup.')
-        return redirect('job_list')
-    
-    if request.user.profile.user_type == 'recruiter':
-        return redirect('recruiter_dashboard')
+    if not hasattr(request.user, "profile"):
+        messages.info(request, "Please complete your profile setup.")
+        return redirect("job_list")
+
+    if request.user.profile.user_type == "recruiter":
+        return redirect("recruiter_dashboard")
     else:
-        return redirect('user_dashboard')
+        return redirect("user_dashboard")
+
+
+@login_required
+def edit_job(request, job_id):
+    """
+    Allow a recruiter to edit a job they posted.
+    Only the employer who created the job (or superuser) can edit.
+    """
+    # Make sure user is a recruiter
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(
+            request, "Access denied. This feature is only available for recruiters."
+        )
+        return redirect("job_list")
+
+    job = get_object_or_404(Job, id=job_id)
+
+    # Make sure they own this job (or are superuser)
+    if job.employer != request.user and not request.user.is_superuser:
+        raise PermissionDenied("You can't edit another recruiter's job.")
+
+    if request.method == "POST":
+        form = JobCreationForm(request.POST, instance=job)
+        if form.is_valid():
+            job = form.save(commit=False)
+
+            # If location changed, re-geocode it
+            if "location" in form.changed_data:
+                location_data = geocode_location(job.location)
+                if location_data:
+                    job.latitude = location_data["latitude"]
+                    job.longitude = location_data["longitude"]
+
+            # If the JS map added hidden fields, respect them
+            lat_from_form = request.POST.get("latitude")
+            lng_from_form = request.POST.get("longitude")
+            if lat_from_form and lng_from_form:
+                try:
+                    job.latitude = float(lat_from_form)
+                    job.longitude = float(lng_from_form)
+                except ValueError:
+                    # don't kill the save if parse fails, just ignore
+                    pass
+
+            job.save()
+            messages.success(request, "Job updated successfully.")
+            return redirect("recruiter_dashboard")
+    else:
+        form = JobCreationForm(instance=job)
+
+    # Reuse the same template as create_job
+    return render(
+        request,
+        "jobs/create_job.html",
+        {
+            "form": form,
+            "job": job,
+            "title": "Edit Job Posting",
+        },
+    )
+
+
+@login_required
+def recruiter_job_list(request):
+    """
+    Show all jobs posted by the logged-in recruiter in a standalone page.
+    """
+    # must be recruiter
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(request, "Access denied. Recruiters only.")
+        return redirect("job_list")
+
+    jobs = Job.objects.filter(employer=request.user).order_by("-posted_at")
+
+    return render(
+        request,
+        "jobs/recruiter_job_list.html",
+        {
+            "jobs": jobs,
+        },
+    )

@@ -167,6 +167,13 @@
                             {{ template_data.form.city }}
                             <small class="form-text text-muted">Enter your city</small>
                         </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Projects</label>
+                            {{ template_data.form.projects }}
+                            <small class="form-text text-muted">
+                                List your notable projects separated by commas (e.g., Portfolio Website, Data Analysis Tool, Mobile App)
+                            </small>
+                        </div>
                         {% endif %}
 
                         <!-- Save Button -->
@@ -240,6 +247,13 @@
                         <h6 class="text-primary">Skills:</h6>
                         {% endif %}
                         <p class="bg-light p-3 rounded">{{ template_data.profile.skills }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if template_data.profile.projects %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">Projects:</h6>
+                        <p class="bg-light p-3 rounded">{{ template_data.profile.projects }}</p>
                     </div>
                     {% endif %}
 

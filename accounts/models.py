@@ -59,6 +59,7 @@ class UserProfile(models.Model):
     experience = models.TextField(blank=True, null=True, help_text="Your work experience")
     education = models.TextField(blank=True, null=True, help_text="Your education background")
     skills = models.TextField(blank=True, null=True, help_text="Your skills (comma-separated)")
+    projects = models.TextField(blank=True, null=True, help_text="List of notable projects or portfolio work (comma-separated)")
     
     # Privacy settings - MOST IMPORTANT
     profile_privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='private')

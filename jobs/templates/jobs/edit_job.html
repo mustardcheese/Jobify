@@ -1,0 +1,50 @@
+@login_required
+def edit_job(request, job_id):
+"""
+Allow a recruiter to edit a job they posted.
+Only the employer who created the job (or superuser) can edit.
+"""
+# Must be recruiter
+if (
+not hasattr(request.user, "profile")
+or request.user.profile.user_type != "recruiter"
+):
+messages.error(
+request, "Access denied. This feature is only available for recruiters."
+)
+return redirect("job_list")
+
+job = get_object_or_404(Job, id=job_id)
+
+# Must own the job OR be superuser
+if job.employer != request.user and not request.user.is_superuser:
+raise PermissionDenied("You can't edit another recruiter's job.")
+
+if request.method == "POST":
+form = JobCreationForm(request.POST, instance=job)
+if form.is_valid():
+job = form.save(commit=False)
+
+# if they changed the location, re-geocode
+if "location" in form.changed_data:
+location_data = geocode_location(job.location)
+if location_data:
+job.latitude = location_data["latitude"]
+job.longitude = location_data["longitude"]
+
+job.save()
+messages.success(request, "Job updated successfully.")
+return redirect("recruiter_dashboard")
+else:
+form = JobCreationForm(instance=job)
+
+# reuse the same form template as create, or a dedicated edit template
+return render(
+request,
+"jobs/create_job.html", # you can point both create/edit at same template
+{
+"form": form,
+"job": job,
+"title": "Edit Job Posting",
+},
+)

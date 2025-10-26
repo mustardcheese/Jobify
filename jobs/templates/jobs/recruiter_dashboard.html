@@ -1,89 +1,65 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block content %}
 <div class="container mt-4">
-    <!-- Header Section -->
+
+    <!-- Header -->
     <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="navy-text mb-1">
-                        <i class="fas fa-briefcase me-2"></i>
-                        Recruiter Dashboard
-                    </h1>
-                    <p class="text-muted mb-0">Manage your job postings and connect with candidates</p>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <!-- Message Notification Badge -->
+        <div class="col-12 d-flex flex-wrap justify-content-between align-items-center">
+            <div>
+                <h1 class="navy-text mb-1">
+                    <i class="fas fa-building me-2"></i>
+                    Recruiter Dashboard
+                </h1>
+                <p class="text-muted mb-0">Manage job postings and candidates</p>
+            </div>
+            <div class="mt-3 mt-md-0 d-flex flex-wrap gap-2">
+                <a href="{% url 'create_job' %}" class="btn btn-outline-success me-2 mb-2">
+                    <i class="fas fa-plus me-1"></i> Post New Job
+                </a>
+                <a href="{% url 'recruiter_applicants_map' %}" class="btn btn-outline-warning me-2 mb-2">
+                    <i class="fas fa-map-marker-alt me-1"></i> Applicants Map
+                </a>
+                <a href="{% url 'inbox' %}" class="btn btn-outline-info mb-2">
+                    <i class="fas fa-envelope me-1"></i>
+                    Messages
                     {% if unread_count > 0 %}
-                    <a href="{% url 'inbox' %}" class="btn btn-outline-danger position-relative">
-                        <i class="fas fa-envelope me-1"></i> Inbox
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ unread_count }}
-                            <span class="visually-hidden">unread messages</span>
-                        </span>
-                    </a>
-                    {% else %}
-                    <a href="{% url 'inbox' %}" class="btn btn-outline-info">
-                        <i class="fas fa-envelope me-1"></i> Inbox
-                    </a>
+                    <span class="badge bg-danger ms-1">{{ unread_count }}</span>
                     {% endif %}
-                    
-                    <a href="{% url 'create_job' %}" class="btn navy-bg eggshell-text">
-                        <i class="fas fa-plus me-1"></i> Create New Job
-                    </a>
-                </div>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Stat Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-4 mb-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="fas fa-briefcase fa-2x navy-text mb-2"></i>
+                    <i class="fas fa-briefcase fa-2x text-success mb-2"></i>
                     <h4 class="card-title">{{ total_jobs }}</h4>
-                    <p class="card-text text-muted">Total Jobs</p>
+                    <p class="card-text text-muted">Job Posts</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+
+        <div class="col-md-4 mb-3">
             <div class="card text-center">
                 <div class="card-body">
-                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                    <i class="fas fa-users fa-2x navy-text mb-2"></i>
                     <h4 class="card-title">{{ total_applications }}</h4>
-                    <p class="card-text text-muted">Total Applications</p>
+                    <p class="card-text text-muted">Total Applicants</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+
+        <div class="col-md-4 mb-3">
             <div class="card text-center">
                 <div class="card-body">
                     <i class="fas fa-envelope fa-2x text-info mb-2"></i>
-                    <h4 class="card-title">
-                        {{ recent_messages|length }}
-                        {% if unread_count > 0 %}
-                        <small class="text-danger">({{ unread_count }} new)</small>
-                        {% endif %}
-                    </h4>
-                    <p class="card-text text-muted">
-                        {% if unread_count > 0 %}
-                        <strong class="text-danger">Unread Messages</strong>
-                        {% else %}
-                        Recent Messages
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                    <h4 class="card-title">{{ jobs.count }}</h4>
-                    <p class="card-text text-muted">Active Jobs</p>
+                    <h4 class="card-title">{{ unread_count }}</h4>
+                    <p class="card-text text-muted">Unread Messages</p>
                 </div>
             </div>
         </div>
@@ -95,35 +71,36 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-tools me-2"></i>
+                        <i class="fas fa-rocket me-2"></i>
                         Quick Actions
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-3">
-                            <a href="{% url 'create_job' %}" class="btn btn-outline-primary w-100 mb-2">
-                                <i class="fas fa-plus me-1"></i> Create New Job
+                            <a href="{% url 'create_job' %}" class="btn btn-outline-success w-100 mb-2">
+                                <i class="fas fa-plus me-1"></i> Post New Job
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{% url 'sent_messages' %}" class="btn btn-outline-info w-100 mb-2">
-                                <i class="fas fa-paper-plane me-1"></i> View Sent Messages
+                            <!-- scroll to job list instead of refreshing dashboard -->
+                            <a href="{% url 'recruiter_job_list' %}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-briefcase me-1"></i> View My Listings
+                            </a>
+
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{% url 'recruiter_applicants_map' %}" class="btn btn-outline-warning w-100 mb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i> Applicants Map
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{% url 'inbox' %}" class="btn {% if unread_count > 0 %}btn-outline-danger{% else %}btn-outline-warning{% endif %} w-100 mb-2 position-relative">
-                                <i class="fas fa-inbox me-1"></i> Inbox
+                            <a href="{% url 'inbox' %}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="fas fa-envelope me-1"></i>
+                                Inbox
                                 {% if unread_count > 0 %}
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    {{ unread_count }}
-                                </span>
+                                <span class="badge bg-danger ms-1">{{ unread_count }}</span>
                                 {% endif %}
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{% url 'recruiter_applicants_map' %}" class="btn btn-outline-success w-100 mb-2">
-                                <i class="fas fa-map-marked-alt me-1"></i> View Applicants On Map
                             </a>
                         </div>
                     </div>
@@ -132,63 +109,63 @@
         </div>
     </div>
 
+    <!-- Row: Recent Applicants + Recent Messages -->
     <div class="row">
-        <!-- Recent Applications -->
+        <!-- Recent Applicants -->
         <div class="col-lg-6 mb-4">
-            <div class="card">
-                <div class="card-header bg-success text-white">
+            <div class="card h-100">
+                <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-users me-2"></i>
-                        Recent Applications
-                        {% if applications %}
-                        <span class="badge bg-warning ms-2">{{ applications|length }} total</span>
-                        {% endif %}
+                        Recent Applicants
                     </h5>
                 </div>
                 <div class="card-body">
                     {% if applications %}
-                        <div class="list-group list-group-flush">
-                            {% for application in applications|slice:":5" %}
-                            <div class="list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">{{ application.applicant.get_full_name|default:application.applicant.username }}</h6>
-                                    <small class="text-muted">{{ application.applied_at|date:"M d" }}</small>
+                    <div class="list-group list-group-flush">
+                        {% for app in applications %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {{ app.applicant.get_full_name|default:app.applicant.username }}
+                                    </h6>
+                                    <p class="mb-1 text-muted small">
+                                        Applied to <strong>{{ app.job.title }}</strong> @ {{ app.job.company }}
+                                    </p>
                                 </div>
-                                <p class="mb-1 text-muted">Applied for: <strong>{{ application.job.title }}</strong></p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="badge 
-                                        {% if application.status == 'applied' %}bg-primary
-                                        {% elif application.status == 'reviewed' %}bg-info
-                                        {% elif application.status == 'interview' %}bg-warning
-                                        {% elif application.status == 'offer' %}bg-success
+                                <small class="text-muted">{{ app.applied_at|timesince }} ago</small>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                                <span class="badge 
+                                        {% if app.status == 'applied' %}bg-primary
+                                        {% elif app.status == 'reviewed' %}bg-info
+                                        {% elif app.status == 'interview' %}bg-warning
+                                        {% elif app.status == 'offer' %}bg-success
                                         {% else %}bg-secondary{% endif %}">
-                                        {{ application.get_status_display }}
-                                    </span>
-                                    <div class="btn-group">
-                                        <a href="{% url 'view_application' application.id %}" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-eye"></i> View
-                                        </a>
-                                        <a href="{% url 'send_message_to_candidate' application.id %}" class="btn btn-success btn-sm">
-                                            <i class="fas fa-paper-plane"></i> Message
-                                        </a>
-                                    </div>
+                                    {{ app.get_status_display }}
+                                </span>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{% url 'view_application' app.id %}"
+                                        class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <a href="{% url 'send_message_to_candidate' app.id %}"
+                                        class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-envelope"></i> Message
+                                    </a>
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
-                        {% if applications|length > 5 %}
-                            <div class="text-center mt-3">
-                                <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-primary btn-sm">
-                                    View All Applications ({{ applications|length }})
-                                </a>
-                            </div>
-                        {% endif %}
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No applications yet</h5>
-                            <p class="text-muted">When candidates apply to your jobs, they'll appear here.</p>
-                        </div>
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No applicants yet</h5>
+                        <p class="text-muted">Once candidates start applying, you'll see them here.</p>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -196,176 +173,134 @@
 
         <!-- Recent Messages -->
         <div class="col-lg-6 mb-4">
-            <div class="card">
-                <div class="card-header {% if unread_count > 0 %}bg-danger text-white{% else %}bg-info text-white{% endif %}">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-envelope me-2"></i>
-                        {% if unread_count > 0 %}
-                        New Messages ({{ unread_count }})
-                        {% else %}
                         Recent Messages
+                        {% if unread_count > 0 %}
+                        <span class="badge bg-warning ms-2">{{ unread_count }} new</span>
                         {% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if unread_count > 0 %}
-                        <!-- Show unread messages first -->
-                        <div class="list-group list-group-flush">
-                            {% for message in unread_messages %}
-                            <a href="{% url 'message_detail' message.id %}" class="list-group-item list-group-item-action bg-warning bg-opacity-10">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">
-                                        <i class="fas fa-exclamation-circle text-danger me-1"></i>
-                                        From: {{ message.sender.get_full_name|default:message.sender.username }}
-                                    </h6>
-                                    <small class="text-muted">{{ message.sent_at|timesince }} ago</small>
-                                </div>
-                                <p class="mb-1"><strong>{{ message.subject }}</strong></p>
-                                <p class="mb-1 text-muted small">{{ message.content|truncatewords:10 }}</p>
-                                {% if message.application %}
-                                <small class="text-muted">Re: {{ message.application.job.title }}</small>
-                                {% endif %}
-                            </a>
-                            {% endfor %}
-                        </div>
-                        {% if recent_messages %}
-                        <hr>
-                        <h6>Recent Sent Messages:</h6>
-                        <div class="list-group list-group-flush">
-                            {% for message in recent_messages %}
-                            <a href="{% url 'message_detail' message.id %}" class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">
-                                        To: {{ message.recipient.get_full_name|default:message.recipient.username }}
-                                    </h6>
-                                    <small class="text-muted">{{ message.sent_at|timesince }} ago</small>
-                                </div>
-                                <p class="mb-1"><strong>{{ message.subject }}</strong></p>
-                                <p class="mb-1 text-muted small">{{ message.content|truncatewords:10 }}</p>
-                            </a>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    {% elif recent_messages %}
-                        <!-- Show recent sent messages if no unread messages -->
-                        <div class="list-group list-group-flush">
-                            {% for message in recent_messages %}
-                            <a href="{% url 'message_detail' message.id %}" class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">
-                                        To: {{ message.recipient.get_full_name|default:message.recipient.username }}
-                                    </h6>
-                                    <small class="text-muted">{{ message.sent_at|timesince }} ago</small>
-                                </div>
-                                <p class="mb-1"><strong>{{ message.subject }}</strong></p>
-                                <p class="mb-1 text-muted small">{{ message.content|truncatewords:10 }}</p>
-                                {% if message.application %}
-                                <small class="text-muted">Re: {{ message.application.job.title }}</small>
-                                {% endif %}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No messages</h5>
-                            <p class="text-muted">Your message inbox is empty.</p>
-                        </div>
-                    {% endif %}
-                    
+                    {% if recent_messages %}
+                    <div class="list-group list-group-flush">
+                        {% for message in recent_messages %}
+                        <a href="{% url 'message_detail' message.id %}"
+                            class="list-group-item list-group-item-action {% if not message.is_read %}bg-light{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {{ message.sender.get_full_name|default:message.sender.username }}
+                                    {% if message.sender.profile.company %}
+                                    <br><small class="text-muted">{{ message.sender.profile.company }}</small>
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">{{ message.sent_at|timesince }} ago</small>
+                            </div>
+                            <p class="mb-1"><strong>{{ message.subject }}</strong></p>
+                            <p class="mb-1 text-muted small">{{ message.content|truncatewords:15 }}</p>
+                            {% if not message.is_read %}
+                            <small class="text-primary"><i class="fas fa-circle me-1"></i>New</small>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+
                     <div class="mt-3">
-                        <a href="{% url 'inbox' %}" class="btn btn-outline-info btn-sm">
-                            View Inbox
-                        </a>
-                        <a href="{% url 'sent_messages' %}" class="btn btn-outline-secondary btn-sm">
-                            View Sent Messages
-                        </a>
-                        <a href="{% url 'select_candidate' %}" class="btn btn-success btn-sm">
-                            <i class="fas fa-plus me-1"></i> New Message
+                        <a href="{% url 'inbox' %}" class="btn btn-outline-primary btn-sm">
+                            View All Messages
                         </a>
                     </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No messages yet</h5>
+                        <p class="text-muted">When candidates reply, you'll see messages here.</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Jobs Table -->
-    <div class="row">
+    </div> <!-- end row -->
+
+    <!-- My Job Postings -->
+    <div class="row" id="my-job-postings">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-list me-2"></i>
-                        Your Job Postings
+                        <i class="fas fa-briefcase me-2"></i>
+                        My Job Postings
                     </h5>
+                    <a href="{% url 'create_job' %}" class="btn btn-outline-success btn-sm mt-2 mt-md-0">
+                        <i class="fas fa-plus me-1"></i> Post New Job
+                    </a>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
                     {% if jobs %}
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Job Title</th>
-                                        <th>Company</th>
-                                        <th>Location</th>
-                                        <th>Applications</th>
-                                        <th>Type</th>
-                                        <th>Status</th>
-                                        <th>Posted</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for job in jobs %}
-                                        <tr>
-                                            <td>
-                                                <strong>{{ job.title }}</strong>
-                                            </td>
-                                            <td>{{ job.company }}</td>
-                                            <td>
-                                                <i class="fas fa-map-marker-alt me-1"></i>
-                                                {{ job.location }}
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-primary">{{ job.applications.count }}</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-secondary">{{ job.get_job_type_display }}</span>
-                                            </td>
-                                            <td>
-                                                {% if job.is_active %}
-                                                    <span class="badge bg-success">Active</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">Inactive</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ job.posted_at|date:"M d, Y" }}</td>
-                                            <td>
-                                                <div class="btn-group">
-                                                    <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-info btn-sm">
-                                                        <i class="fas fa-eye"></i> View Job
-                                                    </a>
-                                                    {% if job.applications.count > 0 %}
-                                                    <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-success btn-sm">
-                                                        <i class="fas fa-users"></i> View Apps
-                                                    </a>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                    <div class="row">
+                        {% for job in jobs %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title navy-text">{{ job.title }}</h6>
+                                    <p class="card-text text-muted">{{ job.company }}</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ job.location }}
+                                        </small>
+                                    </p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ job.get_job_type_display }}
+                                        </small>
+                                    </p>
+                                    <p class="card-text small text-muted mb-0">
+                                        {{ job.applications.count }} applicant{{ job.applications.count|pluralize }}
+                                    </p>
+                                </div>
+
+                                <div class="card-footer d-flex flex-column gap-2">
+                                    <!-- View public job page -->
+                                    <a href="{% url 'job_detail' job.id %}?from_dashboard=1"
+                                        class="btn btn-outline-secondary btn-sm w-100">
+                                        <i class="fas fa-eye me-1"></i> View Posting
+                                    </a>
+
+                                    <!-- Edit job (this uses your edit_job view) -->
+                                    <a href="{% url 'edit_job' job.id %}" class="btn btn-outline-primary btn-sm w-100">
+                                        <i class="fas fa-edit me-1"></i> Edit Posting
+                                    </a>
+
+                                    <!-- View applicants to THIS job only -->
+                                    {% if job.applications.count > 0 %}
+                                    <a href="{% url 'view_application' job.applications.first.id %}"
+                                        class="btn btn-outline-success btn-sm w-100">
+                                        <i class="fas fa-users me-1"></i>
+                                        View Applicants ({{ job.applications.count }})
+                                    </a>
+                                    {% else %}
+                                    <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                                        <i class="fas fa-users me-1"></i>
+                                        No Applicants Yet
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No job postings yet</h5>
-                            <p class="text-muted">Create your first job posting to start receiving applications!</p>
-                            <a href="{% url 'create_job' %}" class="btn navy-bg eggshell-text">
-                                <i class="fas fa-plus me-1"></i> Create Your First Job
-                            </a>
-                        </div>
+                    <div class="text-center py-4">
+                        <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No job postings yet</h5>
+                        <p class="text-muted">Post your first job to start receiving applicants.</p>
+                        <a href="{% url 'create_job' %}" class="btn navy-bg eggshell-text">
+                            <i class="fas fa-plus me-1"></i> Post New Job
+                        </a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -375,74 +310,37 @@
 </div>
 
 <style>
-.navy-bg {
-    background-color: #1e3a8a;
-    border-color: #1e3a8a;
-}
-
-.navy-bg:hover {
-    background-color: #1e40af;
-    border-color: #1e40af;
-}
-
-.navy-text {
-    color: #1e3a8a;
-}
-
-.eggshell-text {
-    color: #f8f9fa;
-}
-
-.table th {
-    border-top: none;
-    font-weight: 600;
-}
-
-.btn-group .btn {
-    margin-right: 2px;
-}
-
-.btn-group .btn:last-child {
-    margin-right: 0;
-}
-
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
-}
-
-.badge {
-    font-size: 0.75em;
-}
-
-.list-group-item {
-    border: none;
-    border-bottom: 1px solid #eee;
-}
-
-.list-group-item:last-child {
-    border-bottom: none;
-}
-
-@media (max-width: 768px) {
-    .btn-group {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
+    .navy-bg {
+        background-color: #1e3a8a;
+        border-color: #1e3a8a;
+        color: #fff;
     }
-    
-    .btn-group .btn {
-        margin-right: 0;
-        font-size: 0.8rem;
+
+    .navy-bg:hover {
+        background-color: #1e40af;
+        border-color: #1e40af;
+        color: #fff;
     }
-    
-    .table-responsive {
-        font-size: 0.875rem;
+
+    .navy-text {
+        color: #1e3a8a;
     }
-    
-    .card-header h5 {
-        font-size: 1rem;
+
+    .eggshell-text {
+        color: #f8f9fa;
     }
-}
+
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    .btn {
+        border-radius: 6px;
+    }
+
+    .badge {
+        font-size: 0.75em;
+    }
 </style>
 {% endblock content %}

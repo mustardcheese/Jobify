@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-p-ewfym=&t3@3sns)74!@7v3%m!(4khjj3ux$(f8^zts)ko8jt
 
 DEBUG = True  # Set to False for production
 
-ALLOWED_HOSTS = ['*']  
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -154,6 +154,6 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    
+
     # Static files settings for production
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'

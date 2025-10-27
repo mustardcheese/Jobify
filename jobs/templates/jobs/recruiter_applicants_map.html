@@ -32,21 +32,12 @@
         </div>
     </div>
 
-<!-- Hidden divs to store job data -->
-<div id="applicant-markers" style="display: none;">
-    {% for applicant in applicants %}
-    <div class="applicant-marker"
-        data-lat="{{ applicant.lat }}"
-        data-lng="{{ applicant.lng }}"
-        data-username="{{ applicant.username|escapejs }}">
-    </div>
-  {% endfor %}
-</div>
-
 <!-- Leaflet CSS & JS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
 var map = L.map('map').setView([39.8283, -98.5795], 4); // center of US
@@ -56,17 +47,35 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-// Add markers by reading from HTML elements
-document.querySelectorAll('.applicant-marker').forEach(function(el) {
-    var lat = parseFloat(el.dataset.lat);
-    var lng = parseFloat(el.dataset.lng);
-    var username = el.dataset.username;
+// Create a marker cluster group
+var markers = L.markerClusterGroup();
 
-    if (!isNaN(lat) && !isNaN(lng)) {
-        var popupHtml = `<b>${username}</b>`;
-        L.marker([lat, lng]).addTo(map).bindPopup(popupHtml);
-    }
-});
+// Create markers with counts
+{% for coords, data in location_counts.items %}
+(function() {
+    var lat = {{ coords.0 }};
+    var lng = {{ coords.1 }};
+    var count = {{ data.count }};
+    var applicants = [
+        {% for applicant in data.applicants %}"{{ applicant }}"{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+
+    // Create custom marker with count
+    var markerHtml = '<div style="background-color: #1e3a8a; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">' + count + '</div>';
+    var customIcon = L.divIcon({
+        html: markerHtml,
+        className: 'custom-marker',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
+
+    var marker = L.marker([lat, lng], {icon: customIcon});
+    marker.bindPopup('<b>' + count + ' applicant(s)</b><br>' + applicants.join('<br>'));
+    markers.addLayer(marker);
+})();
+{% endfor %}
+
+map.addLayer(markers);
 </script>
 
 <style>
@@ -97,14 +106,19 @@ document.querySelectorAll('.applicant-marker').forEach(function(el) {
     border-radius: 6px;
 }
 
-.navy-bg {
-    background-color: #1e3a8a;
-    border-color: #1e3a8a;
+.custom-marker {
+    background: transparent;
+    border: none;
 }
 
-.navy-bg:hover {
+.custom-marker div {
+    cursor: pointer;
+}
+
+.custom-marker:hover div {
     background-color: #1e40af;
-    border-color: #1e40af;
+    transform: scale(1.1);
+    transition: all 0.3s ease;
 }
 </style>
 

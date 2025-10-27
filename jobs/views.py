@@ -488,11 +488,23 @@ def recruiter_applicants_map(request):
                 }
             )
     print("applicants:", applicants)  # Debugging line
+    
+    # Group applicants by location (latitude, longitude rounded to avoid floating point issues)
+    location_counts = {}
+    for applicant in applicants:
+        # Round to 4 decimal places (approximately 11 meters precision)
+        key = (round(applicant['lat'], 4), round(applicant['lng'], 4))
+        if key not in location_counts:
+            location_counts[key] = {'count': 0, 'applicants': []}
+        location_counts[key]['count'] += 1
+        location_counts[key]['applicants'].append(applicant['username'])
+    
     return render(
         request,
         "jobs/recruiter_applicants_map.html",
         {
             "applicants": applicants,
+            "location_counts": location_counts,
         },
     )
 

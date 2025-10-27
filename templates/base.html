@@ -51,6 +51,7 @@
               {% if user.profile.user_type == 'recruiter' %}
                 <!-- Recruiter Navigation -->
                 <a class="nav-link navy-text" href="{% url 'create_job' %}">Create Job</a>
+                <a class="nav-link navy-text" href="{% url 'search_candidates' %}">Search Candidates</a>
                 <a class="nav-link navy-text" href="{% url 'recruiter_dashboard' %}">Dashboard</a>
                 <a class="nav-link navy-text" href="{% url 'accounts.profile' %}">Profile</a>
               {% else %}

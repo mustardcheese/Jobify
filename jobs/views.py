@@ -12,7 +12,67 @@ from django.contrib.auth.models import User
 from geopy.geocoders import Nominatim
 from math import radians, cos, sin, asin, sqrt
 from django.core.exceptions import PermissionDenied
+from django.views.decorators.http import require_http_methods
+from django.views.generic import DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import PipelineStage, ApplicantPipeline, PipelineTransition
+from django.shortcuts import get_object_or_404
 
+class JobPipelineView(LoginRequiredMixin, DetailView):
+    model = Job
+    template_name = 'jobs/job_pipeline.html'
+    context_object_name = 'job'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        job = self.get_object()
+        
+        # Verify the user owns this job
+        if job.employer != self.request.user:
+            raise PermissionDenied("You don't have permission to view this pipeline")
+        
+        stages = job.pipeline_stages.all()
+        applicants_by_stage = {}
+        
+        for stage in stages:
+            applicants_by_stage[stage.id] = ApplicantPipeline.objects.filter(
+                current_stage=stage
+            ).select_related(
+                'application__applicant',
+                'application__applicant__profile'
+            )
+        
+        context['stages'] = stages
+        context['applicants_by_stage'] = applicants_by_stage
+        return context
+    
+class ApplicantDetailView(LoginRequiredMixin, DetailView):
+    model = Application
+    template_name = 'jobs/applicant_detail.html'
+    context_object_name = 'application'
+    
+    def get_queryset(self):
+        # Users can only see applicants for their own jobs
+        return Application.objects.filter(job__employer=self.request.user)
+    
+    def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            application = self.get_object()
+            
+            # Add additional context for the applicant profile
+            context['applicant_profile'] = getattr(application.applicant, 'profile', None)
+            context['current_stage'] = application.current_pipeline_stage
+            
+            # Get stage history if pipeline exists
+            if hasattr(application, 'pipeline_info'):
+                try:
+                    context['stage_history'] = application.pipeline_info.get_stage_history()
+                except:
+                    context['stage_history'] = []
+            else:
+                context['stage_history'] = []
+            
+            return context
 
 def geocode_zip(zip_code):
     """Return (latitude, longitude) for a ZIP code using OpenStreetMap."""
@@ -133,8 +193,12 @@ def quick_apply(request, job_id):
         job=job, applicant=request.user, application_note=""
     )
 
+    # CREATE PIPELINE ENTRY FOR THIS APPLICATION
+    application.create_pipeline_entry()
+    
     messages.info(request, "Please upload your resume to complete your Quick Apply.")
     return redirect("quick_apply_form", job_id=job_id)
+
 
 
 @login_required
@@ -182,6 +246,9 @@ def apply_to_job(request, job_id):
             application.applicant = request.user
             application.save()
 
+            # CREATE PIPELINE ENTRY FOR THIS APPLICATION
+            application.create_pipeline_entry()
+            
             messages.success(
                 request, f"✅ Application submitted for {job.title} at {job.company}!"
             )
@@ -387,6 +454,7 @@ def create_job(request):
             request, "Access denied. This feature is only available for recruiters."
         )
         return redirect("job_list")
+    
     if request.method == "POST":
         form = JobCreationForm(request.POST)
         if form.is_valid():
@@ -411,6 +479,11 @@ def create_job(request):
                 )
 
             job.save()
+            
+            # CREATE PIPELINE STAGES FOR THE NEW JOB
+            job.create_default_pipeline_stages()
+            messages.info(request, "Pipeline stages created for this job.")
+            
             return redirect("recruiter_dashboard")
     else:
         form = JobCreationForm()
@@ -464,6 +537,8 @@ def recruiter_dashboard(request):
         # stats for cards
         "total_jobs": jobs.count(),
         "total_applications": applications_qs.count(),
+        #pipeline data
+        "jobs_with_applicants": [job for job in jobs if job.applications.exists()],
     }
     return render(request, "jobs/recruiter_dashboard.html", context)
 
@@ -977,3 +1052,71 @@ def recruiter_job_list(request):
             "jobs": jobs,
         },
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def move_applicant(request, applicant_id):
+    """Move applicant to a new stage via AJAX"""
+    print(f"=== MOVE APPLICANT REQUEST ===")
+    print(f"Applicant ID: {applicant_id}")
+    print(f"User: {request.user}")
+    print(f"POST data: {request.POST}")
+    
+    try:
+        pipeline_applicant = get_object_or_404(
+            ApplicantPipeline, 
+            application_id=applicant_id
+        )
+        
+        print(f"Found applicant: {pipeline_applicant}")
+        print(f"Current stage: {pipeline_applicant.current_stage.name}")
+        print(f"Job employer: {pipeline_applicant.current_stage.job.employer}")
+        
+        # Verify the user owns the job
+        if pipeline_applicant.current_stage.job.employer != request.user:
+            print("PERMISSION DENIED: User doesn't own this job")
+            return JsonResponse({
+                'success': False,
+                'message': 'Permission denied'
+            }, status=403)
+        
+        new_stage_id = request.POST.get('new_stage_id')
+        print(f"New stage ID: {new_stage_id}")
+        
+        new_stage = get_object_or_404(
+            PipelineStage, 
+            id=new_stage_id,
+            job=pipeline_applicant.current_stage.job
+        )
+        
+        print(f"New stage: {new_stage.name}")
+        
+        # Create transition record
+        PipelineTransition.objects.create(
+            applicant_pipeline=pipeline_applicant,
+            from_stage=pipeline_applicant.current_stage,
+            to_stage=new_stage,
+            moved_by=request.user
+        )
+        
+        # Move the applicant
+        old_stage = pipeline_applicant.current_stage
+        pipeline_applicant.move_to_stage(new_stage)
+        
+        print(f"SUCCESS: Moved from {old_stage.name} to {new_stage.name}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Applicant moved successfully',
+            'new_stage_name': new_stage.name
+        })
+        
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)

@@ -1,0 +1,291 @@
+<!-- jobs/templates/jobs/job_pipeline.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ job.title }} - Pipeline{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">{{ job.title }}</h1>
+            <p class="text-muted mb-0">{{ job.company }} - {{ job.location }}</p>
+            <p class="text-muted">Applicant Pipeline</p>
+        </div>
+        <div>
+            <a href="{% url 'job_detail' job.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Job
+            </a>
+            <a href="{% url 'recruiter_dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <div class="row">
+            {% for stage in stages %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header text-white bg-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{{ stage.name }}</h5>
+                            <span class="badge bg-light text-dark stage-badge" data-stage-id="{{ stage.id }}">
+                                {% for key, value in applicants_by_stage.items %}
+                                    {% if key == stage.id %}
+                                        {{ value|length }}
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body p-3 stage-column" data-stage-id="{{ stage.id }}" style="min-height: 400px; background-color: #f8f9fa;">
+                        
+                        {% for key, pipeline_applicants in applicants_by_stage.items %}
+                            {% if key == stage.id %}
+                                {% for pipeline_applicant in pipeline_applicants %}
+                                <div class="applicant-card mb-3 p-3 border rounded bg-white" data-applicant-id="{{ pipeline_applicant.application.id }}">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">{{ pipeline_applicant.application.candidate_name }}</h6>
+                                        <small class="text-muted">
+                                            {{ pipeline_applicant.application.applied_at|date:"M d" }}
+                                        </small>
+                                    </div>
+                                    <p class="small text-muted mb-2">
+                                        {{ pipeline_applicant.application.application_note|truncatewords:10 }}
+                                    </p>
+                                    
+                                    <!-- Stage Dropdown -->
+                                    <div class="mb-2">
+                                        <label class="form-label small text-muted mb-1">Move to:</label>
+                                        <select class="form-select form-select-sm stage-select" 
+                                                data-applicant-id="{{ pipeline_applicant.application.id }}"
+                                                data-current-stage="{{ stage.id }}">
+                                            <option value="">Select stage...</option>
+                                            {% for s in stages %}
+                                            <option value="{{ s.id }}" {% if s.id == stage.id %}selected{% endif %}>
+                                                {{ s.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-1">
+                                        <a href="{% url 'applicant_detail' pipeline_applicant.application.id %}" 
+                                           class="btn btn-sm btn-outline-primary flex-fill">
+                                            View Details
+                                        </a>
+                                        {% if pipeline_applicant.application.candidate_email %}
+                                        <a href="mailto:{{ pipeline_applicant.application.candidate_email }}" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-envelope"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% for key, pipeline_applicants in applicants_by_stage.items %}
+                            {% if key == stage.id and pipeline_applicants|length == 0 %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-2x mb-2"></i>
+                                <p class="mb-0">No applicants</p>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden element for URLs -->
+<div id="urls-data" 
+     data-move-applicant-url="{% url 'move_applicant' 0 %}"
+     style="display: none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Pipeline JavaScript loaded successfully!");
+    
+    const stageSelects = document.querySelectorAll('.stage-select');
+    console.log("Found stage selects:", stageSelects.length);
+    
+    stageSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const applicantId = this.dataset.applicantId;
+            const newStageId = this.value;
+            const currentStageId = this.dataset.currentStage;
+            
+            console.log("Moving applicant:", applicantId, "from stage:", currentStageId, "to stage:", newStageId);
+            
+            if (!newStageId || newStageId === currentStageId) {
+                console.log("No change or same stage, resetting dropdown");
+                this.value = currentStageId;
+                return;
+            }
+            
+            moveApplicant(applicantId, newStageId, this);
+        });
+    });
+    
+    function moveApplicant(applicantId, newStageId, selectElement) {
+        console.log("Starting move for applicant:", applicantId);
+        
+        const applicantCard = selectElement.closest('.applicant-card');
+        const currentStageId = selectElement.dataset.currentStage;
+        
+        // Show loading state
+        const originalContent = applicantCard.innerHTML;
+        applicantCard.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-spinner fa-spin text-primary"></i>
+                <p class="small text-muted mt-2 mb-0">Moving applicant...</p>
+            </div>
+        `;
+        
+        // Get the move URL
+        const moveUrl = document.getElementById('urls-data').dataset.moveApplicantUrl.replace('0', applicantId);
+        console.log("Making request to:", moveUrl);
+        
+        // Send AJAX request
+        fetch(moveUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'new_stage_id=' + newStageId
+        })
+        .then(response => {
+            console.log("Response status:", response.status);
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Response data:", data);
+            if (data.success) {
+                showAlert('✅ Applicant moved to ' + data.new_stage_name, 'success');
+                
+                // Update the card's data attribute
+                applicantCard.dataset.currentStage = newStageId;
+                
+                // Find the target stage column
+                const targetColumn = document.querySelector('.stage-column[data-stage-id="' + newStageId + '"]');
+                if (targetColumn) {
+                    // Move the card to the new column
+                    applicantCard.innerHTML = originalContent;
+                    
+                    // Update the dropdown in the moved card
+                    const dropdown = applicantCard.querySelector('.stage-select');
+                    dropdown.dataset.currentStage = newStageId;
+                    dropdown.value = newStageId;
+                    
+                    // Move the card visually
+                    targetColumn.appendChild(applicantCard);
+                    
+                    // Update badge counts
+                    updateBadgeCounts();
+                    
+                    console.log('Card moved successfully to new stage');
+                } else {
+                    console.error('Target column not found for stage:', newStageId);
+                    // Fallback: reload the page
+                    window.location.reload();
+                }
+            } else {
+                applicantCard.innerHTML = originalContent;
+                showAlert('❌ Error: ' + data.message, 'error');
+                selectElement.value = currentStageId;
+                console.error('Server error:', data.message);
+            }
+        })
+        .catch(error => {
+            applicantCard.innerHTML = originalContent;
+            showAlert('❌ Network error: ' + error.message, 'error');
+            selectElement.value = currentStageId;
+            console.error('Fetch error:', error);
+        });
+    }
+    
+    function updateBadgeCounts() {
+        console.log("Updating badge counts...");
+        // Update the badge counts for each stage
+        document.querySelectorAll('.stage-column').forEach(column => {
+            const stageId = column.dataset.stageId;
+            const applicantCount = column.querySelectorAll('.applicant-card').length;
+            const badge = document.querySelector('.stage-badge[data-stage-id="' + stageId + '"]');
+            if (badge) {
+                badge.textContent = applicantCount;
+                console.log("Updated stage", stageId, "badge to:", applicantCount);
+            }
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showAlert(message, type) {
+        // Remove any existing alerts
+        const existingAlerts = document.querySelectorAll('.pipeline-alert');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Create new alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'pipeline-alert alert alert-' + (type === 'error' ? 'danger' : 'success') + ' alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+        alertDiv.style.zIndex = '1050';
+        alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+});
+</script>
+
+<style>
+.kanban-board {
+    overflow-x: auto;
+}
+
+.applicant-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.applicant-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+.stage-select {
+    font-size: 0.875rem;
+}
+
+.stage-column {
+    transition: background-color 0.2s ease;
+}
+</style>
+{% endblock %}

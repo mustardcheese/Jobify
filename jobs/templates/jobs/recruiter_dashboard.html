@@ -83,11 +83,9 @@
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <!-- scroll to job list instead of refreshing dashboard -->
                             <a href="{% url 'recruiter_job_list' %}" class="btn btn-outline-primary w-100 mb-2">
                                 <i class="fas fa-briefcase me-1"></i> View My Listings
                             </a>
-
                         </div>
                         <div class="col-md-3">
                             <a href="{% url 'recruiter_applicants_map' %}" class="btn btn-outline-warning w-100 mb-2">
@@ -101,6 +99,12 @@
                                 {% if unread_count > 0 %}
                                 <span class="badge bg-danger ms-1">{{ unread_count }}</span>
                                 {% endif %}
+                            </a>
+                        </div>
+                        <!-- PIPELINE QUICK ACTION -->
+                        <div class="col-md-3">
+                            <a href="#my-job-postings" class="btn btn-outline-purple w-100 mb-2">
+                                <i class="fas fa-columns me-1"></i> View Pipelines
                             </a>
                         </div>
                     </div>
@@ -138,14 +142,22 @@
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
-                                <span class="badge 
-                                        {% if app.status == 'applied' %}bg-primary
-                                        {% elif app.status == 'reviewed' %}bg-info
-                                        {% elif app.status == 'interview' %}bg-warning
-                                        {% elif app.status == 'offer' %}bg-success
-                                        {% else %}bg-secondary{% endif %}">
-                                    {{ app.get_status_display }}
-                                </span>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    <span class="badge 
+                                            {% if app.status == 'applied' %}bg-primary
+                                            {% elif app.status == 'reviewed' %}bg-info
+                                            {% elif app.status == 'interview' %}bg-warning
+                                            {% elif app.status == 'offer' %}bg-success
+                                            {% else %}bg-secondary{% endif %}">
+                                        {{ app.get_status_display }}
+                                    </span>
+                                    <!-- PIPELINE STAGE BADGE -->
+                                    {% if app.current_pipeline_stage %}
+                                    <span class="badge pipeline-stage pipeline-stage-{{ app.current_pipeline_stage.id }}">
+                                        {{ app.current_pipeline_stage.name }}
+                                    </span>
+                                    {% endif %}
+                                </div>
                                 <div class="d-flex flex-wrap gap-2">
                                     <a href="{% url 'view_application' app.id %}"
                                         class="btn btn-outline-primary btn-sm">
@@ -269,10 +281,17 @@
                                         <i class="fas fa-eye me-1"></i> View Posting
                                     </a>
 
-                                    <!-- Edit job (this uses your edit_job view) -->
+                                    <!-- Edit job -->
                                     <a href="{% url 'edit_job' job.id %}" class="btn btn-outline-primary btn-sm w-100">
                                         <i class="fas fa-edit me-1"></i> Edit Posting
                                     </a>
+
+                                    <!-- PIPELINE BUTTON - show if there are applicants -->
+                                    {% if job.applications.count > 0 %}
+                                    <a href="{% url 'job_pipeline' job.id %}" class="btn btn-outline-info btn-sm w-100">
+                                        <i class="fas fa-columns me-1"></i> View Pipeline
+                                    </a>
+                                    {% endif %}
 
                                     <!-- View applicants to THIS job only -->
                                     {% if job.applications.count > 0 %}
@@ -330,6 +349,18 @@
         color: #f8f9fa;
     }
 
+    /* PURPLE BUTTON STYLES FOR PIPELINE */
+    .btn-outline-purple {
+        color: #6f42c1;
+        border-color: #6f42c1;
+    }
+
+    .btn-outline-purple:hover {
+        background-color: #6f42c1;
+        border-color: #6f42c1;
+        color: white;
+    }
+
     .card {
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         border: 1px solid rgba(0, 0, 0, 0.125);
@@ -342,5 +373,18 @@
     .badge {
         font-size: 0.75em;
     }
-</style>
+
+    .pipeline-stage {
+        color: white;
+        font-size: 0.7em;
+    }
+
+    /* Define colors for specific stages */
+    .pipeline-stage-1 { background-color: #3498db; } /* Applied */
+    .pipeline-stage-2 { background-color: #9b59b6; } /* Screening */
+    .pipeline-stage-3 { background-color: #f39c12; } /* Interview */
+    .pipeline-stage-4 { background-color: #2ecc71; } /* Offer */
+    .pipeline-stage-5 { background-color: #27ae60; } /* Hired */
+    .pipeline-stage-6 { background-color: #e74c3c; } /* Rejected */
+    </style>
 {% endblock content %}

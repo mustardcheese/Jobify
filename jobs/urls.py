@@ -60,4 +60,8 @@ urlpatterns = [
     # recruiter picks which candidate to message
     path("messages/select-candidate/", views.select_candidate, name="select_candidate"),
     path("recruiter/jobs/", views.recruiter_job_list, name="recruiter_job_list"),
+    #kanan-board
+    path('job/<int:pk>/pipeline/', views.JobPipelineView.as_view(), name='job_pipeline'),
+    path('applicant/<int:applicant_id>/move/', views.move_applicant, name='move_applicant'),
+    path('applicant/<int:pk>/', views.ApplicantDetailView.as_view(), name='applicant_detail'),
 ]

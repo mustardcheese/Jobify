@@ -174,6 +174,48 @@
                                 List your notable projects separated by commas (e.g., Portfolio Website, Data Analysis Tool, Mobile App)
                             </small>
                         </div>
+
+                        <!-- Professional Links Section -->
+                        <div class="card mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-link me-2"></i>Professional Links
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fab fa-linkedin me-1"></i>LinkedIn Profile
+                                    </label>
+                                    {{ template_data.form.linkedin_url }}
+                                    <small class="form-text text-muted">Your LinkedIn profile URL</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fab fa-github me-1"></i>GitHub Profile
+                                    </label>
+                                    {{ template_data.form.github_url }}
+                                    <small class="form-text text-muted">Your GitHub profile URL</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-globe me-1"></i>Portfolio Website
+                                    </label>
+                                    {{ template_data.form.portfolio_url }}
+                                    <small class="form-text text-muted">Your portfolio or personal website</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-external-link-alt me-1"></i>Other Link
+                                    </label>
+                                    {{ template_data.form.other_url }}
+                                    <small class="form-text text-muted">Any other professional link (Twitter, Medium, etc.)</small>
+                                </div>
+                            </div>
+                        </div>
                         {% endif %}
 
                         <!-- Save Button -->
@@ -254,6 +296,50 @@
                     <div class="mb-3">
                         <h6 class="text-primary">Projects:</h6>
                         <p class="bg-light p-3 rounded">{{ template_data.profile.projects }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if template_data.profile.linkedin_url or template_data.profile.github_url or template_data.profile.portfolio_url or template_data.profile.other_url %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">Professional Links:</h6>
+                        <div class="bg-light p-3 rounded">
+                            {% if template_data.profile.linkedin_url %}
+                            <div class="mb-2">
+                                <i class="fab fa-linkedin text-primary me-2"></i>
+                                <strong>LinkedIn:</strong>
+                                <a href="{{ template_data.profile.linkedin_url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ template_data.profile.linkedin_url }}
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% if template_data.profile.github_url %}
+                            <div class="mb-2">
+                                <i class="fab fa-github text-dark me-2"></i>
+                                <strong>GitHub:</strong>
+                                <a href="{{ template_data.profile.github_url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ template_data.profile.github_url }}
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% if template_data.profile.portfolio_url %}
+                            <div class="mb-2">
+                                <i class="fas fa-globe text-success me-2"></i>
+                                <strong>Portfolio:</strong>
+                                <a href="{{ template_data.profile.portfolio_url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ template_data.profile.portfolio_url }}
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% if template_data.profile.other_url %}
+                            <div class="mb-2">
+                                <i class="fas fa-external-link-alt text-info me-2"></i>
+                                <strong>Other:</strong>
+                                <a href="{{ template_data.profile.other_url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ template_data.profile.other_url }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endif %}
 

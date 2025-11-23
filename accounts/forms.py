@@ -65,7 +65,7 @@ class CustomUserCreationForm(UserCreationForm):
 class JobSeekerProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['bio', 'experience', 'education', 'skills', 'projects', 'profile_privacy', 'allow_recruiters_to_contact', 'latitude', 'longitude', 'city']
+        fields = ['bio', 'experience', 'education', 'skills', 'projects', 'linkedin_url', 'github_url', 'portfolio_url', 'other_url', 'profile_privacy', 'allow_recruiters_to_contact', 'latitude', 'longitude', 'city']
         widgets = {
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
@@ -76,6 +76,10 @@ class JobSeekerProfileForm(forms.ModelForm):
             'education': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe your education background...'}),
             'skills': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'List your skills separated by commas...'}),
             'projects': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'List your projects separated by commas...'}),
+            'linkedin_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://linkedin.com/in/yourprofile'}),
+            'github_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://github.com/yourusername'}),
+            'portfolio_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://yourportfolio.com'}),
+            'other_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Any other professional link'}),
             'profile_privacy': forms.Select(attrs={'class': 'form-control'}),
             'allow_recruiters_to_contact': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your city...'}),

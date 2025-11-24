@@ -1120,3 +1120,118 @@ def move_applicant(request, applicant_id):
             'success': False,
             'message': str(e)
         }, status=400)
+
+
+@login_required
+def candidate_recommendations(request, job_id):
+    """
+    Show recommended candidates for a specific job posting.
+    Matches candidates based on skills, experience level, and location.
+    Only shows public profiles with allow_recruiters_to_contact enabled.
+    """
+    # Ensure user is a recruiter
+    if not hasattr(request.user, 'profile') or request.user.profile.user_type != 'recruiter':
+        return redirect('user_dashboard')
+
+    # Get the job and verify ownership
+    job = get_object_or_404(Job, id=job_id, employer=request.user)
+
+    # Parse job requirements and description for keywords
+    job_text = f"{job.title} {job.description} {job.requirements}".lower()
+    job_keywords = set(word.strip() for word in job_text.split())
+
+    # Get all public candidates who allow recruiter contact
+    all_candidates = UserProfile.objects.filter(
+        user_type='user',
+        profile_privacy='public',
+        allow_recruiters_to_contact=True
+    ).select_related('user')
+
+    # Get candidates who already applied to this job
+    applied_user_ids = Application.objects.filter(
+        job=job
+    ).values_list('applicant_id', flat=True)
+
+    # Calculate match scores for each candidate
+    ranked_candidates = []
+
+    for profile in all_candidates:
+        # Skip if already applied
+        if profile.user.id in applied_user_ids:
+            continue
+
+        match_score = 0
+        matched_skills = []
+
+        # Check skills match
+        if profile.skills:
+            candidate_skills = [s.strip().lower() for s in profile.skills.split(',') if s.strip()]
+            for skill in candidate_skills:
+                if skill in job_text:
+                    match_score += 3
+                    matched_skills.append(skill)
+
+        # Check experience text for relevant keywords
+        if profile.experience:
+            experience_text = profile.experience.lower()
+            for keyword in job_keywords:
+                if len(keyword) > 3 and keyword in experience_text:
+                    match_score += 1
+
+        # Check education for relevant keywords
+        if profile.education:
+            education_text = profile.education.lower()
+            for keyword in job_keywords:
+                if len(keyword) > 3 and keyword in education_text:
+                    match_score += 1
+
+        # Check projects for relevant keywords
+        if profile.projects:
+            projects_list = [p.strip().lower() for p in profile.projects.split(',') if p.strip()]
+            for project in projects_list:
+                for keyword in job_keywords:
+                    if len(keyword) > 3 and keyword in project:
+                        match_score += 2
+
+        # Location match bonus (if both have location data)
+        if profile.latitude and profile.longitude and job.latitude and job.longitude:
+            import math
+
+            # Haversine formula for distance calculation
+            lat1, lon1 = math.radians(profile.latitude), math.radians(profile.longitude)
+            lat2, lon2 = math.radians(job.latitude), math.radians(job.longitude)
+
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+
+            a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+            c = 2 * math.asin(math.sqrt(a))
+            distance_km = 6371 * c
+
+            # Bonus points for nearby candidates (within 50km)
+            if distance_km <= 50:
+                match_score += 5
+
+        # Only include candidates with at least some match
+        if match_score > 0:
+            ranked_candidates.append({
+                'profile': profile,
+                'match_score': match_score,
+                'matched_skills': matched_skills,
+                'distance': distance_km if 'distance_km' in locals() else None
+            })
+
+    # Sort by match score (highest first)
+    ranked_candidates.sort(key=lambda x: x['match_score'], reverse=True)
+
+    # Limit to top 20 recommendations
+    top_candidates = ranked_candidates[:20]
+
+    context = {
+        'job': job,
+        'candidates': top_candidates,
+        'total_matches': len(ranked_candidates),
+        'showing_count': len(top_candidates)
+    }
+
+    return render(request, 'jobs/candidate_recommendations.html', context)

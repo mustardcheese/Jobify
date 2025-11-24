@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+
+  <h2 class="text-center mb-4">📁 Saved Candidate Searches</h2>
+
+  {% if searches %}
+    <div class="list-group">
+      {% for s in searches %}
+        <div class="list-group-item {% if s.new_matches_count > 0 %}bg-danger bg-opacity-25 border-danger{% endif %}">
+          <div class="d-flex justify-content-between align-items-center">
+
+            <div>
+              <strong>
+                Search {{ forloop.counter }}
+              </strong>
+
+              {% if s.new_matches_count > 0 %}
+                <span class="text-danger fw-bold ms-2">(New matches available!)</span>
+              {% endif %}
+              <br>
+
+              {% if s.skill %}
+                <span><strong>Skill:</strong> {{ s.skill }}</span><br>
+              {% endif %}
+              {% if s.city %}
+                <span><strong>City:</strong> {{ s.city }}</span><br>
+              {% endif %}
+              {% if s.project %}
+                <span><strong>Project:</strong> {{ s.project }}</span><br>
+              {% endif %}
+
+              <small class="text-muted">
+                Saved on {{ s.created_at|date:"M d, Y" }}
+              </small>
+            </div>
+
+            <div class="text-end">
+              <a href="{% url 'search_candidates' %}?skill={{ s.skill }}&city={{ s.city }}&project={{ s.project }}"
+                 class="btn btn-primary btn-sm mb-2">
+                Run Search
+              </a>
+
+              <form method="post" action="{% url 'delete_candidate_search' s.id %}">
+                {% csrf_token %}
+                <button class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="alert alert-info text-center">
+      You have no saved searches yet.
+    </div>
+  {% endif %}
+
+</div>
+
+<style>
+  .btn-primary {
+    background-color: #0f2a44;
+    border-color: #0f2a44;
+  }
+  .btn-primary:hover {
+    background-color: #0a1f33;
+    border-color: #0a1f33;
+  }
+</style>
+
+{% endblock %}

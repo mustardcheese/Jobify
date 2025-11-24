@@ -17,6 +17,7 @@ from django.views.generic import DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import PipelineStage, ApplicantPipeline, PipelineTransition
 from django.shortcuts import get_object_or_404
+from accounts.models import CandidateMatch, SavedCandidateSearch
 
 class JobPipelineView(LoginRequiredMixin, DetailView):
     model = Job
@@ -515,6 +516,12 @@ def recruiter_dashboard(request):
         .order_by("-applied_at")
     )
 
+    # Count new matches for this recruiter
+    match_count = CandidateMatch.objects.filter(
+        search__recruiter=request.user,
+        seen=False
+    ).count()
+
     # Messages sent TO this recruiter
     inbox_qs = (
         Message.objects.filter(recipient=request.user)
@@ -539,6 +546,7 @@ def recruiter_dashboard(request):
         "total_applications": applications_qs.count(),
         #pipeline data
         "jobs_with_applicants": [job for job in jobs if job.applications.exists()],
+        "match_count": match_count, 
     }
     return render(request, "jobs/recruiter_dashboard.html", context)
 

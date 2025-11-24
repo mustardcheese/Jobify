@@ -1,4 +1,4 @@
-from django.shortcuts import render  # FIXED: Changed 'rom' to 'from'
+from django.shortcuts import render
 from .forms import CustomUserCreationForm, CustomErrorList, SimpleProfileForm, JobSeekerProfileForm, RecruiterProfileForm, RecruiterEmailForm
 from django.contrib.auth import login as auth_login, authenticate
 from django.shortcuts import redirect
@@ -9,7 +9,9 @@ from django.contrib import messages
 from .models import UserProfile
 from jobs.models import Application
 from jobs.utils import test_email_connection
-from django.db.models import Q 
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from .models import SavedCandidateSearch, CandidateMatch
 
 
 def login(request):
@@ -87,6 +89,34 @@ def logout(request):
     auth_logout(request)
     return redirect("home.index")
 
+def update_matches_for_user(user):
+    """Recompute ALL recruiter saved searches whenever a job seeker updates profile."""
+
+    profile = user.profile
+    skills = profile.skills.lower() if profile.skills else ""
+    projects = profile.projects.lower() if profile.projects else ""
+    city = profile.city.lower() if profile.city else ""
+
+    # Remove old matches for this candidate
+    CandidateMatch.objects.filter(candidate=user).delete()
+
+    saved_searches = SavedCandidateSearch.objects.all()
+
+    for s in saved_searches:
+        # Skip searches created by the candidate themself
+        if s.recruiter == user:
+            continue
+
+        skill_ok = (not s.skill) or (s.skill.lower() in skills)
+        project_ok = (not s.project) or (s.project.lower() in projects)
+        city_ok = (not s.city) or (s.city.lower() == city)
+
+        if skill_ok and project_ok and city_ok:
+            CandidateMatch.objects.create(
+                search=s,
+                candidate=user,
+                seen=False
+            )
 
 @login_required
 def profile(request):
@@ -124,6 +154,8 @@ def save_profile(request):
             
         if form.is_valid():
             form.save()
+            if request.user.profile.user_type == "user":
+                update_matches_for_user(request.user)
             messages.success(request, "Profile saved successfully!")
             return redirect("accounts.profile")
         else:
@@ -198,12 +230,32 @@ def search_candidates(request):
         messages.error(request, "You must be a recruiter to access this page.")
         return redirect('home.index')
 
+    # Get search inputs
     skill = request.GET.get('skill', '')
     city = request.GET.get('city', '')
     project = request.GET.get('project', '')
 
-    print("DEBUG:", skill, city, project)  # 👈 Add this line
+    # Normalize empty values for matching saved searches
+    normalized_skill = skill.strip() or ""
+    normalized_city = city.strip() or ""
+    normalized_project = project.strip() or ""
 
+    # Find saved search with EXACT same criteria
+    saved_searches = SavedCandidateSearch.objects.filter(
+        recruiter=request.user,
+        skill=normalized_skill,
+        city=normalized_city,
+        project=normalized_project,
+    )
+
+    # If matched saved search exists, reset matches for that search only
+    if saved_searches.exists():
+        CandidateMatch.objects.filter(
+            search__in=saved_searches,
+            seen=False
+        ).update(seen=True)
+
+    # Filter candidates
     candidates = UserProfile.objects.filter(user_type='user', profile_privacy='public')
 
     if skill:
@@ -212,8 +264,6 @@ def search_candidates(request):
         candidates = candidates.filter(city__icontains=city)
     if project:
         candidates = candidates.filter(projects__icontains=project)
-
-    print("RESULT COUNT:", candidates.count())  # 👈 Add this line too
 
     context = {
         'template_data': {
@@ -225,3 +275,66 @@ def search_candidates(request):
         }
     }
     return render(request, 'accounts/search_candidates.html', context)
+
+@login_required
+def save_candidate_search(request):
+    """Save a recruiter’s candidate search."""
+    user = request.user
+
+    # Only recruiters can save searches
+    if not hasattr(user, "profile") or user.profile.user_type != "recruiter":
+        messages.error(request, "Only recruiters can save searches.")
+        return redirect("search_candidates")
+
+    # Get search parameters from URL
+    skill = request.GET.get("skill") or ""
+    city = request.GET.get("city") or ""
+    project = request.GET.get("project") or ""
+
+    # At least one field must be filled
+    if not (skill or city or project):
+        messages.warning(request, "You must enter at least one search field before saving.")
+        return redirect("search_candidates")
+
+    # Save the search
+    SavedCandidateSearch.objects.create(
+        recruiter=user,
+        skill=skill.strip(),
+        city=city.strip(),
+        project=project.strip(),
+    )
+
+    messages.success(request, "Your search has been saved successfully!")
+    return redirect("search_candidates")
+
+@login_required
+def saved_candidate_searches(request):
+    # Only recruiters
+    if (
+        not hasattr(request.user, "profile")
+        or request.user.profile.user_type != "recruiter"
+    ):
+        messages.error(request, "Access denied. Recruiter-only feature.")
+        return redirect("user_dashboard")
+
+    searches = SavedCandidateSearch.objects.filter(
+        recruiter=request.user
+    ).order_by("-created_at")
+
+    # Reset the match counter by marking all unseen matches as seen
+    from accounts.models import CandidateMatch
+    CandidateMatch.objects.filter(
+        search__recruiter=request.user,
+        seen=False
+    ).update(seen=True)
+
+    return render(request, "accounts/saved_candidate_searches.html", {
+        "searches": searches
+    })
+
+@login_required
+def delete_candidate_search(request, search_id):
+    search = get_object_or_404(SavedCandidateSearch, id=search_id, recruiter=request.user)
+    search.delete()
+    messages.success(request, "Saved search deleted.")
+    return redirect("saved_candidate_searches")

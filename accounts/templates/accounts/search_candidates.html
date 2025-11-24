@@ -39,6 +39,14 @@
     </div>
   </form>
 
+  <!-- Save Search Button -->
+  <div class="text-center mt-3">
+    <a href="{% url 'save_candidate_search' %}?skill={{ template_data.skill }}&city={{ template_data.city }}&project={{ template_data.project }}"
+      class="btn btn-outline-secondary">
+        <i class="fas fa-bookmark me-2"></i> Save This Search
+    </a>
+  </div>
+
   <!-- Results -->
   {% if template_data.candidates %}
     <h4 class="mt-4">{{ template_data.candidates|length }} candidate{{ template_data.candidates|pluralize }} found:</h4>

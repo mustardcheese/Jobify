@@ -134,3 +134,24 @@ def save_user_profile(sender, instance, **kwargs):
     except UserProfile.DoesNotExist:
         # If profile doesn't exist, create it
         UserProfile.objects.get_or_create(user=instance)
+
+class SavedCandidateSearch(models.Model):
+    recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="saved_searches")
+    skill = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=255, blank=True, null=True)
+    project = models.CharField(max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_notified_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Saved Search by {self.recruiter.username}"
+
+class CandidateMatch(models.Model):
+    search = models.ForeignKey(SavedCandidateSearch, on_delete=models.CASCADE)
+    candidate = models.ForeignKey(User, on_delete=models.CASCADE)
+    seen = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Match for {self.search.id} - {self.candidate.username}"

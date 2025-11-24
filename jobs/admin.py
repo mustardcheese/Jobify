@@ -101,24 +101,6 @@ def export_applications_csv(modeladmin, request, queryset):
 
     return response
 
-    # use select_related to avoid N+1 queries
-    for app in queryset.select_related("job", "applicant"):
-        applicant = app.applicant
-        writer.writerow(
-            [
-                app.id,
-                app.job.id if app.job else "",
-                app.job.title if app.job else "",
-                getattr(applicant, "username", "") if applicant else "",
-                getattr(applicant, "email", "") if applicant else "",
-                app.status,
-                app.applied_at,
-                app.application_note,
-            ]
-        )
-
-    return response
-
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
@@ -150,8 +132,14 @@ class JobAdmin(admin.ModelAdmin):
             "Basic Information",
             {"fields": ["title", "company", "location", "is_active"]},
         ),
-        ("Job Details", {"fields": ["job_type", "experience_level", "salary_range"]}),
-        ("Description & Requirements", {"fields": ["description", "requirements"]}),
+        (
+            "Job Details",
+            {"fields": ["job_type", "experience_level", "salary_range"]},
+        ),
+        (
+            "Description & Requirements",
+            {"fields": ["description", "requirements"]},
+        ),
         (
             "Location Coordinates (for map)",
             {"fields": ["latitude", "longitude"], "classes": ["collapse"]},
@@ -166,4 +154,4 @@ class ApplicationAdmin(admin.ModelAdmin):
     search_fields = ["applicant__username", "job__title", "application_note"]
     list_editable = ["status"]
     readonly_fields = ["applied_at"]
-    actions = [export_applications_csv]  # new CSV export action
+    actions = [export_applications_csv]

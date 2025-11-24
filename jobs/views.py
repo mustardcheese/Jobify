@@ -17,7 +17,7 @@ from django.views.generic import DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import PipelineStage, ApplicantPipeline, PipelineTransition
 from django.shortcuts import get_object_or_404
-from accounts.models import CandidateMatch, SavedCandidateSearch
+from accounts.models import CandidateMatch, SavedCandidateSearch, UserProfile
 
 class JobPipelineView(LoginRequiredMixin, DetailView):
     model = Job

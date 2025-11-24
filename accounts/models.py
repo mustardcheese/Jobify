@@ -60,6 +60,12 @@ class UserProfile(models.Model):
     education = models.TextField(blank=True, null=True, help_text="Your education background")
     skills = models.TextField(blank=True, null=True, help_text="Your skills (comma-separated)")
     projects = models.TextField(blank=True, null=True, help_text="List of notable projects or portfolio work (comma-separated)")
+
+    # Professional links
+    linkedin_url = models.URLField(blank=True, null=True, help_text="Your LinkedIn profile URL")
+    github_url = models.URLField(blank=True, null=True, help_text="Your GitHub profile URL")
+    portfolio_url = models.URLField(blank=True, null=True, help_text="Your portfolio website URL")
+    other_url = models.URLField(blank=True, null=True, help_text="Any other professional link")
     
     # Privacy settings - MOST IMPORTANT
     profile_privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='private')

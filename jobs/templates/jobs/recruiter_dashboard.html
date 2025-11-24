@@ -304,6 +304,11 @@
                                         <i class="fas fa-edit me-1"></i> Edit Posting
                                     </a>
 
+                                    <!-- Candidate Recommendations -->
+                                    <a href="{% url 'candidate_recommendations' job.id %}" class="btn btn-outline-warning btn-sm w-100">
+                                        <i class="fas fa-user-check me-1"></i> Find Candidates
+                                    </a>
+
                                     <!-- PIPELINE BUTTON - show if there are applicants -->
                                     {% if job.applications.count > 0 %}
                                     <a href="{% url 'job_pipeline' job.id %}" class="btn btn-outline-info btn-sm w-100">

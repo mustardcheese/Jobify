@@ -25,3 +25,7 @@ staticfiles/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]

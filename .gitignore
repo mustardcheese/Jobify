@@ -25,3 +25,10 @@ staticfiles/
 # OS files
 .DS_Store
 Thumbs.db
+
+echo "
+
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+" >> .gitignore
